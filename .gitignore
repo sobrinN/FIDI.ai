@@ -33,3 +33,9 @@ server/.env
 
 # Startup file with API keys
 STARTUP.md
+
+# Test and utility files
+openrouter-test.ts
+openrouter-model-ids.ts
+openrouter-models.json
+openrouter-model-ids.json
