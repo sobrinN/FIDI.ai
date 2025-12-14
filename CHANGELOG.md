@@ -5,6 +5,69 @@ All notable changes to FIDI.ai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-12-13
+
+### Added
+- **Token Quota System**: Complete user token management with monthly resets
+  - Default balance: 50,000 tokens per user
+  - Automatic monthly reset (30-day intervals)
+  - Thread-safe operations using file-system locking
+  - Real-time balance tracking and usage statistics
+- **Token Costs**:
+  - Image generation: 5,000 tokens
+  - Video generation: 20,000 tokens
+  - Chat completion: Dynamic based on actual API usage
+- **Model Selector with FREE/PAID Tiers**:
+  - 4 FREE models with unlimited usage (no token deduction)
+  - 6 PAID models with 1.5x token cost multiplier
+  - Visual dropdown UI with tier badges
+  - Per-conversation model locking
+- **Frontend Components**:
+  - `TokenBalance.tsx`: Real-time token balance display with color-coded indicators
+  - `ModelSelector.tsx`: Beautiful model selection dropdown
+  - Integrated into `ChatInterface.tsx` sidebar
+- **Backend Services**:
+  - `tokenService.ts`: Core token management with lazy migration
+  - `tokenQuota.ts`: Middleware for quota enforcement
+  - Admin routes for token grants (`admin.ts`)
+- **Model Configuration**:
+  - Tiered model system (FREE/PAID/LEGACY)
+  - Full metadata with display names, descriptions, providers
+  - Cost multiplier system (0x/1.5x/1.0x)
+  - Frontend/backend model configuration sync
+
+### Changed
+- Extended `User` interface with token fields (balance, usage, reset date)
+- Extended `Conversation` interface with `modelId` for model locking
+- Updated `allowedModels.ts` with comprehensive tier system
+- Enhanced chat route to track OpenRouter API usage
+- Modified media routes with fail-safe token deduction
+- Updated `storageUtils.ts` validation for new fields
+
+### Security
+- Server-side token calculations (no client manipulation)
+- File-system locking prevents race conditions
+- Fail-safe charging (only deduct on success)
+- Audit logging for all token operations
+- Admin-only token grant permissions
+
+### Fixed
+- TOCTOU race condition in token deduction
+- Stale lock cleanup (30-second timeout)
+- Partial failure handling in media generation
+- Null checks for optional token fields
+- Backend/frontend data structure alignment
+- OpenRouter SDK camelCase compatibility (`totalTokens`)
+
+### Technical
+- Thread-safe operations with atomic file locking
+- Lazy migration for backward compatibility
+- Server-side cost multiplier enforcement
+- Real-time usage tracking from OpenRouter API
+- HTTP 402 error handling for insufficient tokens
+
+---
+
 ## [0.3.0] - 2025-12-09
 
 ### Added
@@ -165,6 +228,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 0.4.0 | 2025-12-13 | Token quota system, FREE/PAID model selector |
 | 0.3.0 | 2025-12-09 | Documentation update, security hardening |
 | 0.2.0 | 2025-12-05 | Backend server integration, JWT auth |
 | 0.1.5 | 2025-12-04 | Code splitting, performance optimization |

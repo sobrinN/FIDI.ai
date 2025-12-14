@@ -1,12 +1,19 @@
 import { Router } from 'express';
 import { APIError } from '../middleware/errorHandler.js';
+import { AuthRequest } from '../middleware/auth.js';
+import { checkTokenQuota } from '../middleware/tokenQuota.js';
+import { deductTokens, TOKEN_COSTS } from '../lib/tokenService.js';
 
 export const mediaRouter = Router();
 
 const REPLICATE_API_BASE = 'https://api.replicate.com/v1';
 
+// FIX: Use proper Replicate version hashes instead of model names
+// Note: These are version-specific hashes. Update when using different model versions.
 const MODELS = {
+  // FLUX 1.1 Pro - Fast, high-quality image generation
   IMAGE: 'black-forest-labs/flux-1.1-pro',
+  // MiniMax Video-01 - Text-to-video generation
   VIDEO: 'minimax/video-01'
 };
 
@@ -95,12 +102,16 @@ async function pollPrediction(getUrl: string, apiKey: string): Promise<Replicate
   throw new APIError('Prediction timed out after 2 minutes', 408, 'TIMEOUT');
 }
 
-mediaRouter.post('/image', async (req, res, next) => {
+mediaRouter.post('/image', checkTokenQuota(TOKEN_COSTS.IMAGE_GENERATION), async (req: AuthRequest, res, next) => {
   try {
     const { prompt } = req.body;
 
     if (!prompt || typeof prompt !== 'string') {
       throw new APIError('Invalid or missing prompt', 400, 'INVALID_PROMPT');
+    }
+
+    if (!req.user) {
+      throw new APIError('Authentication required', 401, 'NO_USER');
     }
 
     const apiKey = process.env.REPLICATE_API_KEY;
@@ -114,10 +125,11 @@ mediaRouter.post('/image', async (req, res, next) => {
       method: 'POST',
       headers: {
         'Authorization': `Token ${apiKey}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Prefer': 'wait'
       },
       body: JSON.stringify({
-        version: MODELS.IMAGE,
+        model: MODELS.IMAGE,
         input: {
           prompt: enhancedPrompt,
           aspect_ratio: '1:1',
@@ -145,18 +157,56 @@ mediaRouter.post('/image', async (req, res, next) => {
       throw new APIError('No image URL in prediction output', 500, 'NO_OUTPUT');
     }
 
-    res.json({ url: imageUrl });
+    // FIX: Wrap token deduction in try-catch to handle partial failures
+    // If deduction fails, user still gets their image but with a warning
+    try {
+      const deductionResult = await deductTokens(
+        req.user.id,
+        TOKEN_COSTS.IMAGE_GENERATION,
+        'Image generation'
+      );
+
+      if (!deductionResult.success) {
+        console.error('[Media] Token deduction failed but image was generated:', deductionResult.error);
+        return res.json({
+          url: imageUrl,
+          warning: 'Image generated successfully but token deduction failed. Please contact support.',
+          tokensUsed: TOKEN_COSTS.IMAGE_GENERATION,
+          deductionFailed: true
+        });
+      }
+
+      res.json({
+        url: imageUrl,
+        tokensUsed: TOKEN_COSTS.IMAGE_GENERATION,
+        newBalance: deductionResult.newBalance
+      });
+    } catch (deductError) {
+      // Log error but still return the image
+      console.error('[Media] Token deduction exception but image was generated:', deductError);
+
+      res.json({
+        url: imageUrl,
+        warning: 'Image generated successfully but token deduction failed. Please contact support.',
+        tokensUsed: TOKEN_COSTS.IMAGE_GENERATION,
+        deductionFailed: true
+      });
+    }
   } catch (error) {
     next(error);
   }
 });
 
-mediaRouter.post('/video', async (req, res, next) => {
+mediaRouter.post('/video', checkTokenQuota(TOKEN_COSTS.VIDEO_GENERATION), async (req: AuthRequest, res, next) => {
   try {
     const { prompt } = req.body;
 
     if (!prompt || typeof prompt !== 'string') {
       throw new APIError('Invalid or missing prompt', 400, 'INVALID_PROMPT');
+    }
+
+    if (!req.user) {
+      throw new APIError('Authentication required', 401, 'NO_USER');
     }
 
     const apiKey = process.env.REPLICATE_API_KEY;
@@ -170,10 +220,11 @@ mediaRouter.post('/video', async (req, res, next) => {
       method: 'POST',
       headers: {
         'Authorization': `Token ${apiKey}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Prefer': 'wait'
       },
       body: JSON.stringify({
-        version: MODELS.VIDEO,
+        model: MODELS.VIDEO,
         input: {
           prompt: enhancedPrompt
         }
@@ -198,7 +249,41 @@ mediaRouter.post('/video', async (req, res, next) => {
       throw new APIError('No video URL in prediction output', 500, 'NO_OUTPUT');
     }
 
-    res.json({ url: videoUrl });
+    // FIX: Wrap token deduction in try-catch to handle partial failures
+    // If deduction fails, user still gets their video but with a warning
+    try {
+      const deductionResult = await deductTokens(
+        req.user.id,
+        TOKEN_COSTS.VIDEO_GENERATION,
+        'Video generation'
+      );
+
+      if (!deductionResult.success) {
+        console.error('[Media] Token deduction failed but video was generated:', deductionResult.error);
+        return res.json({
+          url: videoUrl,
+          warning: 'Video generated successfully but token deduction failed. Please contact support.',
+          tokensUsed: TOKEN_COSTS.VIDEO_GENERATION,
+          deductionFailed: true
+        });
+      }
+
+      res.json({
+        url: videoUrl,
+        tokensUsed: TOKEN_COSTS.VIDEO_GENERATION,
+        newBalance: deductionResult.newBalance
+      });
+    } catch (deductError) {
+      // Log error but still return the video
+      console.error('[Media] Token deduction exception but video was generated:', deductError);
+
+      res.json({
+        url: videoUrl,
+        warning: 'Video generated successfully but token deduction failed. Please contact support.',
+        tokensUsed: TOKEN_COSTS.VIDEO_GENERATION,
+        deductionFailed: true
+      });
+    }
   } catch (error) {
     next(error);
   }

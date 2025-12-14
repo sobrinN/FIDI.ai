@@ -24,6 +24,16 @@ async function handleResponse(response: Response) {
       error: 'Unknown error',
       code: 'UNKNOWN'
     }));
+
+    // Special handling for insufficient tokens (HTTP 402)
+    if (response.status === 402) {
+      throw new APIError(
+        error.error || 'Insufficient tokens',
+        402,
+        'INSUFFICIENT_TOKENS'
+      );
+    }
+
     throw new APIError(
       error.error || 'Request failed',
       response.status,

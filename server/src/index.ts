@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { chatRouter } from './routes/chat.js';
 import { mediaRouter } from './routes/media.js';
 import { authRouter } from './routes/auth.js';
+import { adminRouter } from './routes/admin.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { apiLimiter, aiLimiter, authLimiter, registrationLimiter } from './middleware/rateLimiter.js';
 import { authMiddleware } from './middleware/auth.js';
@@ -141,6 +142,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth', authRouter); // Public - needed for login/register
 app.use('/api/chat', authMiddleware, chatRouter); // Protected - requires authentication
 app.use('/api/media', authMiddleware, mediaRouter); // Protected - requires authentication
+app.use('/api/admin', authMiddleware, adminRouter); // Protected - requires admin authentication
 
 // Error handling (must be last)
 app.use(errorHandler);

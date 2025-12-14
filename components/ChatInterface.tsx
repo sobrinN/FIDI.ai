@@ -4,7 +4,7 @@ import { User, Message, Conversation, Attachment } from '../types';
 import { NeuralBackground } from './NeuralBackground';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AGENTS } from '../config/agents';
-import { streamChatCompletion, generateImage, generateVideo } from '../lib/apiClient';
+import { streamChatCompletion, generateImage, generateVideo, APIError } from '../lib/apiClient';
 import { convertToOpenRouterHistory } from '../lib/historyUtils';
 import DOMPurify from 'dompurify';
 import { useFileAttachments } from '../hooks/useFileAttachments';
@@ -12,6 +12,9 @@ import { useAutoScroll } from '../hooks/useAutoScroll';
 import { useConversations } from '../hooks/useConversations';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { MESSAGE_LIMITS, UI } from '../config/constants';
+import { TokenBalance } from './TokenBalance';
+import { ModelSelector } from './ModelSelector';
+import { getModelInfo } from '../config/models';
 
 interface ChatInterfaceProps {
   onBack: () => void;
@@ -44,6 +47,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
   } = useConversations(currentUser);
 
   const [selectedAgentId, setSelectedAgentId] = useState<keyof typeof AGENTS>('01');
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -94,7 +98,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
     alert('Please ensure the backend server is running on port 3001');
   };
 
-  // Sync selected agent with current chat - FIXED: Added conversations to dependency array
+  // Sync selected agent and model with current chat - FIXED: Added conversations to dependency array
   useEffect(() => {
     if (currentId) {
       const conv = conversations.find(c => c.id === currentId);
@@ -102,6 +106,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
         setSelectedAgentId(conv.agentId as keyof typeof AGENTS);
       } else {
         setSelectedAgentId('01');
+      }
+
+      // Sync model selection from conversation
+      if (conv?.modelId !== undefined) {
+        setSelectedModel(conv.modelId);
+      } else {
+        setSelectedModel(null); // Use agent default
       }
     }
   }, [currentId, conversations]);
@@ -113,8 +124,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
 
   const currentAgent = AGENTS[selectedAgentId];
 
+  // Model locking logic - lock model per conversation after first message
+  const currentConversation = conversations.find(c => c.id === currentId);
+  const canChangeModel = !currentConversation || currentConversation.messages.length === 0;
+  const isModelLocked = !canChangeModel;
+  const modelLockReason = isModelLocked
+    ? 'Model locked: conversation has messages. Start a new session to change models.'
+    : undefined;
+
   const handleNewChat = () => {
     setCurrentId(null);
+    setSelectedModel(null); // Reset model selection for new conversation
     clearAttachments();
     setIsSidebarOpen(false);
     setTimeout(() => inputRef.current?.focus(), 100);
@@ -187,10 +207,19 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
       setProcessingStatus(null);
       setIsTyping(false);
 
+      // Handle insufficient tokens error
+      let errorMessage = `Error generating image: ${error instanceof Error ? error.message : 'Unknown error'}`;
+
+      if (error instanceof APIError && error.code === 'INSUFFICIENT_TOKENS') {
+        const daysText = currentUser?.daysUntilReset === 1 ? 'day' : 'days';
+        errorMessage = `**Insufficient Tokens**\n\n` +
+          `You don't have enough tokens to generate images. Your current balance is ${currentUser?.tokenBalance?.toLocaleString() || 0} tokens.\n\n` +
+          `Your token balance will automatically reset in ${currentUser?.daysUntilReset || 0} ${daysText}.\n\n` +
+          `Image generation typically uses 2,000-5,000 tokens depending on complexity.`;
+      }
+
       // Show error message using functional update
-      const errorMsg = createAssistantMessage(
-        `Error generating image: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      const errorMsg = createAssistantMessage(errorMessage);
       setConversations(prev => prev.map(conv => {
         if (conv.id === conversationId) {
           return {
@@ -237,10 +266,19 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
       setProcessingStatus(null);
       setIsTyping(false);
 
+      // Handle insufficient tokens error
+      let errorMessage = `Error generating video: ${error instanceof Error ? error.message : 'Unknown error'}`;
+
+      if (error instanceof APIError && error.code === 'INSUFFICIENT_TOKENS') {
+        const daysText = currentUser?.daysUntilReset === 1 ? 'day' : 'days';
+        errorMessage = `**Insufficient Tokens**\n\n` +
+          `You don't have enough tokens to generate videos. Your current balance is ${currentUser?.tokenBalance?.toLocaleString() || 0} tokens.\n\n` +
+          `Your token balance will automatically reset in ${currentUser?.daysUntilReset || 0} ${daysText}.\n\n` +
+          `Video generation typically uses 5,000-10,000 tokens depending on length and complexity.`;
+      }
+
       // Show error message using functional update
-      const errorMsg = createAssistantMessage(
-        `Error generating video: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      const errorMsg = createAssistantMessage(errorMessage);
       setConversations(prev => prev.map(conv => {
         if (conv.id === conversationId) {
           return {
@@ -275,9 +313,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
       return conv;
     }));
 
-    // Stream chat completion
+    // Stream chat completion with selected model or agent default
+    const modelToUse = selectedModel || currentAgent.model;
+
     await streamChatCompletion({
-      model: currentAgent.model,
+      model: modelToUse,
       systemPrompt: currentAgent.systemPrompt,
       messages: history,
       onChunk: (text: string) => {
@@ -308,6 +348,21 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
           setIsKeySet(false);
         }
 
+        // Determine error message
+        let errorContent: string;
+
+        if (error instanceof APIError && error.code === 'INSUFFICIENT_TOKENS') {
+          const daysText = currentUser?.daysUntilReset === 1 ? 'day' : 'days';
+          errorContent = `**Insufficient Tokens**\n\n` +
+            `You don't have enough tokens to send this message. Your current balance is ${currentUser?.tokenBalance?.toLocaleString() || 0} tokens.\n\n` +
+            `Your token balance will automatically reset in ${currentUser?.daysUntilReset || 0} ${daysText}.\n\n` +
+            `Each message typically uses 100-500 tokens depending on length and complexity.`;
+        } else if (error.message?.includes('403') || error.message?.includes('401')) {
+          errorContent = "Authentication error: Check your OPENROUTER_API_KEY in server/.env";
+        } else {
+          errorContent = `Connection error: ${error.message || 'Please try again.'}`;
+        }
+
         setConversations(prev => prev.map(conv => {
           if (conv.id === conversationId) {
             const msgs = [...conv.messages];
@@ -315,9 +370,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
             if (lastMsg.role === 'assistant') {
               msgs[msgs.length - 1] = {
                 ...lastMsg,
-                content: error.message?.includes('403') || error.message?.includes('401')
-                  ? "Authentication error: Check your OPENROUTER_API_KEY in server/.env"
-                  : `Connection error: ${error.message || 'Please try again.'}`
+                content: errorContent
               };
             }
             return { ...conv, messages: msgs };
@@ -347,6 +400,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
       return;
     }
 
+    // Check low balance warning (< 1000 tokens)
+    if (currentUser?.tokenBalance !== undefined && currentUser.tokenBalance < 1000) {
+      const daysText = currentUser.daysUntilReset === 1 ? 'day' : 'days';
+      const confirmed = window.confirm(
+        `Low token balance (${currentUser.tokenBalance.toLocaleString()} tokens remaining).\n\n` +
+        `Your balance will reset in ${currentUser.daysUntilReset} ${daysText}.\n\n` +
+        `Do you want to continue?`
+      );
+      if (!confirmed) return;
+    }
+
     isProcessingRef.current = true;
 
     try {
@@ -370,6 +434,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
           messages: [userMsg],
           lastModified: now,
           agentId: selectedAgentId,
+          modelId: selectedModel || undefined, // Lock model on first message
           createdAt: now,
           updatedAt: now
         };
@@ -388,7 +453,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
               ...conv,
               messages: [...conv.messages, userMsg],
               lastModified: Date.now(),
-              updatedAt: Date.now()
+              updatedAt: Date.now(),
+              // Lock model on first message if not already set
+              modelId: conv.modelId || selectedModel || undefined
             };
           }
           return conv;
@@ -494,6 +561,47 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
           <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-gray-400">
             <X size={20} />
           </button>
+        </div>
+
+        {/* Token Balance Display */}
+        {currentUser && (
+          <div className="p-4 border-b border-blue-900/30">
+            <TokenBalance user={currentUser} />
+          </div>
+        )}
+
+        {/* Model Selector */}
+        <div className="p-4 border-b border-blue-900/30">
+          <h3 className="font-mono text-xs text-blue-500 uppercase tracking-widest mb-3 px-2">
+            AI Model
+          </h3>
+          <ModelSelector
+            selectedModel={selectedModel}
+            onModelChange={setSelectedModel}
+            disabled={isModelLocked}
+            lockedReason={modelLockReason}
+            defaultModel={currentAgent.model}
+          />
+
+          {/* Model info display */}
+          {selectedModel && (
+            <div className="mt-3 px-2">
+              <div className="flex items-start gap-2 p-2 bg-blue-900/10 border border-blue-500/20 rounded-lg">
+                <Sparkles size={14} className="text-blue-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-sans text-xs text-blue-300 font-semibold">
+                    {getModelInfo(selectedModel)?.displayName}
+                  </p>
+                  <p className="font-sans text-[10px] text-gray-400 leading-tight mt-0.5">
+                    {getModelInfo(selectedModel)?.costMultiplier === 0
+                      ? 'Unlimited usage - no token cost'
+                      : `${getModelInfo(selectedModel)?.costMultiplier}x token cost multiplier`
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Agent Selector */}

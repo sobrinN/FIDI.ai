@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { OpenRouter } from '@openrouter/sdk';
 import { APIError } from '../middleware/errorHandler.js';
+import { AuthRequest } from '../middleware/auth.js';
 import { formatMessagesForModel } from '../lib/modelAdapters.js';
-import { isAllowedModel, getAllowedModelsString } from '../config/allowedModels.js';
+import { isAllowedModel, getAllowedModelsString, getModelCostMultiplier } from '../config/allowedModels.js';
+import { deductTokens } from '../lib/tokenService.js';
 
 export const chatRouter = Router();
 
@@ -113,7 +115,7 @@ const getOpenRouterClient = () => {
   });
 };
 
-chatRouter.post('/stream', async (req, res, next) => {
+chatRouter.post('/stream', async (req: AuthRequest, res, next) => {
   try {
     const { model, systemPrompt, messages } = req.body;
 
@@ -154,18 +156,81 @@ chatRouter.post('/stream', async (req, res, next) => {
       // Use model adapter to format messages appropriately for each model
       const formattedMessages = formatMessagesForModel(model, systemPrompt, validatedMessages);
 
+      // Request usage data from OpenRouter
       const stream = await openRouter.chat.send({
         model,
         messages: formattedMessages,
-        stream: true
+        stream: true,
+        streamOptions: {
+          includeUsage: true
+        }
       }, {
         signal: controller.signal
       });
+
+      let totalTokensUsed = 0;
+      let usageCaptured = false;
+      let streamSuccessful = false;
 
       for await (const chunk of stream) {
         const content = chunk.choices?.[0]?.delta?.content;
         if (content) {
           res.write(`data: ${JSON.stringify({ content })}\n\n`);
+        }
+
+        // Capture token usage from final chunk
+        if (chunk.usage?.totalTokens) {
+          totalTokensUsed = chunk.usage.totalTokens;
+          usageCaptured = true;
+        }
+      }
+
+      streamSuccessful = true;
+
+      // FIX: Handle missing usage data from OpenRouter
+      if (!usageCaptured || totalTokensUsed === 0) {
+        console.warn('[Chat] No usage data received from OpenRouter for request. Unable to deduct tokens.');
+        res.write(`data: ${JSON.stringify({
+          warning: 'Token usage could not be tracked for this request'
+        })}\n\n`);
+      }
+
+      // Deduct tokens after successful stream completion (only if we have usage data)
+      if (usageCaptured && totalTokensUsed > 0 && req.user) {
+        try {
+          // Get cost multiplier for this model (0 for FREE, 1.5 for PAID, 1.0 for LEGACY)
+          const costMultiplier = getModelCostMultiplier(model);
+          const actualCost = Math.ceil(totalTokensUsed * costMultiplier);
+
+          const deductionResult = await deductTokens(
+            req.user.id,
+            totalTokensUsed,
+            `Chat completion (${model})`,
+            costMultiplier
+          );
+
+          // Send usage info to client with multiplier details
+          if (deductionResult.success) {
+            res.write(`data: ${JSON.stringify({
+              usage: {
+                tokens: totalTokensUsed,
+                costMultiplier: costMultiplier,
+                actualCost: actualCost,
+                newBalance: deductionResult.newBalance
+              }
+            })}\n\n`);
+          } else {
+            console.error('[Chat] Failed to deduct tokens:', deductionResult.error);
+            res.write(`data: ${JSON.stringify({
+              warning: 'Token deduction failed',
+              error: deductionResult.error
+            })}\n\n`);
+          }
+        } catch (error) {
+          console.error('[Chat] Exception during token deduction:', error);
+          res.write(`data: ${JSON.stringify({
+            warning: 'Token deduction failed due to exception'
+          })}\n\n`);
         }
       }
 

@@ -89,11 +89,14 @@ function isValidConversation(data: unknown): data is Conversation {
   const conv = data as Record<string, unknown>;
   return (
     typeof conv.id === 'string' &&
-    typeof conv.agentId === 'string' &&
     typeof conv.title === 'string' &&
     Array.isArray(conv.messages) &&
-    typeof conv.createdAt === 'number' &&
-    typeof conv.lastModified === 'number'
+    typeof conv.lastModified === 'number' &&
+    // Optional fields
+    (conv.agentId === undefined || typeof conv.agentId === 'string') &&
+    (conv.modelId === undefined || typeof conv.modelId === 'string') &&
+    (conv.createdAt === undefined || typeof conv.createdAt === 'number') &&
+    (conv.updatedAt === undefined || typeof conv.updatedAt === 'number')
   );
 }
 

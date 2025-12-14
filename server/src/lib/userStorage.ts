@@ -22,6 +22,12 @@ export interface StoredUser {
   password: string;
   createdAt: number;
   updatedAt: number;
+  // Token system fields
+  tokenBalance?: number;
+  tokenUsageTotal?: number;
+  tokenUsageThisMonth?: number;
+  lastTokenReset?: number;
+  isAdmin?: boolean;
 }
 
 interface UsersData {
@@ -90,19 +96,61 @@ function writeUsers(users: StoredUser[]): void {
 }
 
 /**
- * Get a user by email
+ * Get a user by email (with lazy migration for token fields)
  */
 export function getUserByEmail(email: string): StoredUser | null {
   const users = readUsers();
-  return users.find(u => u.email.toLowerCase() === email.toLowerCase()) || null;
+  const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+
+  if (!user) {
+    return null;
+  }
+
+  // Lazy migration: add token fields if they don't exist
+  if (user.tokenBalance === undefined) {
+    const migratedUser: StoredUser = {
+      ...user,
+      tokenBalance: 50000,
+      tokenUsageTotal: 0,
+      tokenUsageThisMonth: 0,
+      lastTokenReset: Date.now(),
+      isAdmin: false
+    };
+    updateUser(user.id, migratedUser);
+    console.log('[UserStorage] Migrated user to token system:', user.id);
+    return migratedUser;
+  }
+
+  return user;
 }
 
 /**
- * Get a user by ID
+ * Get a user by ID (with lazy migration for token fields)
  */
 export function getUserById(id: string): StoredUser | null {
   const users = readUsers();
-  return users.find(u => u.id === id) || null;
+  const user = users.find(u => u.id === id);
+
+  if (!user) {
+    return null;
+  }
+
+  // Lazy migration: add token fields if they don't exist
+  if (user.tokenBalance === undefined) {
+    const migratedUser: StoredUser = {
+      ...user,
+      tokenBalance: 50000,
+      tokenUsageTotal: 0,
+      tokenUsageThisMonth: 0,
+      lastTokenReset: Date.now(),
+      isAdmin: false
+    };
+    updateUser(user.id, migratedUser);
+    console.log('[UserStorage] Migrated user to token system:', user.id);
+    return migratedUser;
+  }
+
+  return user;
 }
 
 /**
@@ -123,11 +171,21 @@ export function createUser(user: StoredUser): StoredUser {
     throw new Error('Email already registered');
   }
 
-  users.push(user);
+  // Initialize token fields for new users
+  const userWithTokens: StoredUser = {
+    ...user,
+    tokenBalance: 50000, // Default balance
+    tokenUsageTotal: 0,
+    tokenUsageThisMonth: 0,
+    lastTokenReset: Date.now(),
+    isAdmin: false
+  };
+
+  users.push(userWithTokens);
   writeUsers(users);
 
-  console.log('[UserStorage] Created user:', { id: user.id, email: user.email });
-  return user;
+  console.log('[UserStorage] Created user:', { id: userWithTokens.id, email: userWithTokens.email, tokenBalance: userWithTokens.tokenBalance });
+  return userWithTokens;
 }
 
 /**

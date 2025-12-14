@@ -9,6 +9,7 @@ import {
   createUser,
   StoredUser
 } from '../lib/userStorage.js';
+import { getUsageStats } from '../lib/tokenService.js';
 
 export const authRouter = Router();
 
@@ -260,12 +261,19 @@ authRouter.get('/me', (req, res, next) => {
     // Verify token signature and expiration
     const user = verifyToken(token);
 
+    // Get token usage stats
+    const tokenStats = getUsageStats(user.id);
+
     return res.json({
       authenticated: true,
       user: {
         id: user.id,
         email: user.email,
-        name: user.name
+        name: user.name,
+        // Merge token stats into user object (frontend expects flat structure)
+        tokenBalance: tokenStats?.tokenBalance ?? 0,
+        tokenUsageThisMonth: tokenStats?.tokenUsageThisMonth ?? 0,
+        daysUntilReset: tokenStats?.daysUntilReset ?? 0
       }
     });
   } catch (error) {
