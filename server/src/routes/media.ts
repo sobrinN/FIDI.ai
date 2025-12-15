@@ -56,7 +56,7 @@ async function pollPrediction(getUrl: string, apiKey: string): Promise<Replicate
       throw new APIError(`Failed to poll prediction: ${response.statusText}`, 500, 'POLL_FAILED');
     }
 
-    const prediction: ReplicatePrediction = await response.json();
+    const prediction = await response.json() as ReplicatePrediction;
     const elapsedSeconds = ((Date.now() - startTime) / 1000).toFixed(1);
 
     console.log('[Replicate] Poll attempt', {
@@ -102,7 +102,7 @@ async function pollPrediction(getUrl: string, apiKey: string): Promise<Replicate
   throw new APIError('Prediction timed out after 2 minutes', 408, 'TIMEOUT');
 }
 
-mediaRouter.post('/image', checkTokenQuota(TOKEN_COSTS.IMAGE_GENERATION), async (req: AuthRequest, res, next) => {
+mediaRouter.post('/image', checkTokenQuota(TOKEN_COSTS.IMAGE_GENERATION), async (req: AuthRequest, res, next): Promise<void> => {
   try {
     const { prompt } = req.body;
 
@@ -140,15 +140,15 @@ mediaRouter.post('/image', checkTokenQuota(TOKEN_COSTS.IMAGE_GENERATION), async 
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+      const errorData = await response.json().catch(() => ({ detail: 'Unknown error' })) as { detail?: string };
       throw new APIError(
-        error.detail || `Failed to start image generation: ${response.statusText}`,
+        errorData.detail || `Failed to start image generation: ${response.statusText}`,
         response.status,
         'IMAGE_GENERATION_FAILED'
       );
     }
 
-    const prediction: ReplicatePrediction = await response.json();
+    const prediction = await response.json() as ReplicatePrediction;
     const result = await pollPrediction(prediction.urls.get, apiKey);
 
     const imageUrl = Array.isArray(result.output) ? result.output[0] : result.output;
@@ -168,12 +168,13 @@ mediaRouter.post('/image', checkTokenQuota(TOKEN_COSTS.IMAGE_GENERATION), async 
 
       if (!deductionResult.success) {
         console.error('[Media] Token deduction failed but image was generated:', deductionResult.error);
-        return res.json({
+        res.json({
           url: imageUrl,
           warning: 'Image generated successfully but token deduction failed. Please contact support.',
           tokensUsed: TOKEN_COSTS.IMAGE_GENERATION,
           deductionFailed: true
         });
+        return;
       }
 
       res.json({
@@ -197,7 +198,7 @@ mediaRouter.post('/image', checkTokenQuota(TOKEN_COSTS.IMAGE_GENERATION), async 
   }
 });
 
-mediaRouter.post('/video', checkTokenQuota(TOKEN_COSTS.VIDEO_GENERATION), async (req: AuthRequest, res, next) => {
+mediaRouter.post('/video', checkTokenQuota(TOKEN_COSTS.VIDEO_GENERATION), async (req: AuthRequest, res, next): Promise<void> => {
   try {
     const { prompt } = req.body;
 
@@ -232,15 +233,15 @@ mediaRouter.post('/video', checkTokenQuota(TOKEN_COSTS.VIDEO_GENERATION), async 
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+      const errorData = await response.json().catch(() => ({ detail: 'Unknown error' })) as { detail?: string };
       throw new APIError(
-        error.detail || `Failed to start video generation: ${response.statusText}`,
+        errorData.detail || `Failed to start video generation: ${response.statusText}`,
         response.status,
         'VIDEO_GENERATION_FAILED'
       );
     }
 
-    const prediction: ReplicatePrediction = await response.json();
+    const prediction = await response.json() as ReplicatePrediction;
     const result = await pollPrediction(prediction.urls.get, apiKey);
 
     const videoUrl = Array.isArray(result.output) ? result.output[0] : result.output;
@@ -260,12 +261,13 @@ mediaRouter.post('/video', checkTokenQuota(TOKEN_COSTS.VIDEO_GENERATION), async 
 
       if (!deductionResult.success) {
         console.error('[Media] Token deduction failed but video was generated:', deductionResult.error);
-        return res.json({
+        res.json({
           url: videoUrl,
           warning: 'Video generated successfully but token deduction failed. Please contact support.',
           tokensUsed: TOKEN_COSTS.VIDEO_GENERATION,
           deductionFailed: true
         });
+        return;
       }
 
       res.json({

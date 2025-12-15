@@ -10,6 +10,7 @@ import { getUserConversations, setUserConversations } from '../lib/storageUtils'
 interface UseConversationsReturn {
   conversations: Conversation[];
   currentId: string | null;
+  isInitialized: boolean;
   setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>;
   setCurrentId: React.Dispatch<React.SetStateAction<string | null>>;
   addConversation: (conversation: Conversation) => void;
@@ -21,24 +22,38 @@ interface UseConversationsReturn {
 export const useConversations = (currentUser: User | null): UseConversationsReturn => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Load conversations on mount and when user changes
+  // FIXED: Removed currentId from deps to avoid stale closure issues
   const loadConversations = useCallback(() => {
     if (currentUser) {
       const userConvos = getUserConversations(currentUser.id);
       setConversations(userConvos);
 
-      // Select first conversation if available and no current selection
-      if (userConvos.length > 0 && !currentId) {
-        setCurrentId(userConvos[0].id);
-      }
+      // Use functional update to avoid stale closure with currentId
+      // Only select first conversation if there's no current selection
+      setCurrentId(prevId => {
+        if (prevId === null && userConvos.length > 0) {
+          return userConvos[0].id;
+        }
+        return prevId;
+      });
+
+      setIsInitialized(true);
+    } else {
+      // Clear state when user logs out
+      setConversations([]);
+      setCurrentId(null);
+      setIsInitialized(false);
     }
-  }, [currentUser, currentId]);
+  }, [currentUser]);
 
   // Load on mount and user change
+  // FIXED: Include loadConversations in deps (proper dependency management)
   useEffect(() => {
     loadConversations();
-  }, [currentUser?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loadConversations]);
 
   // Save conversations whenever they change
   // FIXED: Also persist empty conversation list to properly handle deletions
@@ -63,21 +78,24 @@ export const useConversations = (currentUser: User | null): UseConversationsRetu
   }, []);
 
   const deleteConversation = useCallback((id: string) => {
+    // FIX: Avoid stale closure and nested state updates
+    // Compute the filtered list and next ID in a single pass
     setConversations(prev => {
       const filtered = prev.filter(c => c.id !== id);
+      const nextId = filtered.length > 0 ? filtered[0].id : null;
 
-      // If deleting current conversation, select another
-      if (id === currentId) {
-        setCurrentId(filtered.length > 0 ? filtered[0].id : null);
-      }
+      // Update currentId using functional form to compare against latest prevId
+      // React batches these updates together
+      setCurrentId(prevId => (id === prevId ? nextId : prevId));
 
       return filtered;
     });
-  }, [currentId]);
+  }, []); // Empty deps - no stale closure issues
 
   return {
     conversations,
     currentId,
+    isInitialized,
     setConversations,
     setCurrentId,
     addConversation,

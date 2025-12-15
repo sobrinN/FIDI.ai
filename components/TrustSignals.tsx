@@ -14,31 +14,34 @@ const Counter: React.FC<{ end: number; suffix: string; duration?: number }> = ({
   const [hasAnimated, setHasAnimated] = useState(false);
 
   useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | null = null;
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && !hasAnimated) {
           setHasAnimated(true);
           let start = 0;
           const increment = end / (duration / 16); // 60fps
-          
-          const timer = setInterval(() => {
+
+          timer = setInterval(() => {
             start += increment;
             if (start >= end) {
               setCount(end);
-              clearInterval(timer);
+              if (timer) clearInterval(timer);
             } else {
               setCount(Math.floor(start));
             }
           }, 16);
-          
-          return () => clearInterval(timer);
         }
       },
       { threshold: 0.5 }
     );
 
     if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (timer) clearInterval(timer);
+    };
   }, [end, duration, hasAnimated]);
 
   return (

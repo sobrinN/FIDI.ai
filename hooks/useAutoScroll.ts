@@ -21,11 +21,11 @@ interface UseAutoScrollReturn {
   /**
    * Ref to attach to the scroll container
    */
-  scrollContainerRef: React.RefObject<HTMLDivElement>;
+  scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   /**
    * Ref to attach to the element that marks the end of messages
    */
-  messagesEndRef: React.RefObject<HTMLDivElement>;
+  messagesEndRef: React.RefObject<HTMLDivElement | null>;
   /**
    * Check if user is near bottom of scroll area
    */

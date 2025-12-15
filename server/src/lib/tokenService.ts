@@ -6,7 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getUserById, updateUser, StoredUser } from './userStorage.js';
+import { getUserById, updateUser, StoredUser, migrateUserTokenFields, DEFAULT_TOKEN_BALANCE } from './userStorage.js';
 
 // ES module __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -91,24 +91,14 @@ async function acquireLock(userId: string): Promise<() => void> {
  * Check if user needs token reset (30 days since last reset)
  * If yes, reset balance and usage counters
  */
-export function checkAndResetTokens(userId: string): StoredUser | null {
-  const user = getUserById(userId);
+export async function checkAndResetTokens(userId: string): Promise<StoredUser | null> {
+  const user = await getUserById(userId);
   if (!user) {
     return null;
   }
 
-  // Lazy migration: add token fields if they don't exist
-  let migratedUser = user;
-  if (migratedUser.tokenBalance === undefined) {
-    migratedUser = {
-      ...user,
-      tokenBalance: TOKEN_COSTS.DEFAULT_BALANCE,
-      tokenUsageTotal: 0,
-      tokenUsageThisMonth: 0,
-      lastTokenReset: Date.now(),
-      isAdmin: false
-    };
-  }
+  // Use centralized migration logic from userStorage
+  const migratedUser = migrateUserTokenFields(user);
 
   const daysSinceReset = (Date.now() - (migratedUser.lastTokenReset || 0)) / (1000 * 60 * 60 * 24);
 
@@ -116,7 +106,7 @@ export function checkAndResetTokens(userId: string): StoredUser | null {
     // Reset tokens
     const resetUser = {
       ...migratedUser,
-      tokenBalance: TOKEN_COSTS.DEFAULT_BALANCE,
+      tokenBalance: DEFAULT_TOKEN_BALANCE,
       tokenUsageThisMonth: 0,
       lastTokenReset: Date.now()
     };
@@ -124,15 +114,15 @@ export function checkAndResetTokens(userId: string): StoredUser | null {
     console.log('[TokenService] Monthly reset for user:', {
       userId,
       daysSinceReset: daysSinceReset.toFixed(1),
-      newBalance: TOKEN_COSTS.DEFAULT_BALANCE
+      newBalance: DEFAULT_TOKEN_BALANCE
     });
 
-    return updateUser(userId, resetUser);
+    return await updateUser(userId, resetUser);
   }
 
   // No reset needed, but save if migration occurred
   if (migratedUser !== user) {
-    return updateUser(userId, migratedUser);
+    return await updateUser(userId, migratedUser);
   }
 
   return migratedUser;
@@ -141,8 +131,8 @@ export function checkAndResetTokens(userId: string): StoredUser | null {
 /**
  * Get current token balance with auto-reset
  */
-export function getTokenBalance(userId: string): number {
-  const user = checkAndResetTokens(userId);
+export async function getTokenBalance(userId: string): Promise<number> {
+  const user = await checkAndResetTokens(userId);
   if (!user) {
     return 0;
   }
@@ -152,8 +142,8 @@ export function getTokenBalance(userId: string): number {
 /**
  * Check if user has sufficient tokens
  */
-export function hasTokens(userId: string, amount: number): boolean {
-  const balance = getTokenBalance(userId);
+export async function hasTokens(userId: string, amount: number): Promise<boolean> {
+  const balance = await getTokenBalance(userId);
   return balance >= amount;
 }
 
@@ -180,7 +170,7 @@ export async function deductTokens(
 
   try {
     // Check and reset tokens if needed
-    const user = checkAndResetTokens(userId);
+    const user = await checkAndResetTokens(userId);
     if (!user) {
       return { success: false, newBalance: 0, error: 'User not found' };
     }
@@ -227,7 +217,7 @@ export async function deductTokens(
     const newUsageThisMonth = currentUsageMonth + actualCost;
 
     // CRITICAL FIX: Update user BEFORE releasing lock to prevent race condition
-    const updatedUser = updateUser(userId, {
+    const updatedUser = await updateUser(userId, {
       tokenBalance: newBalance,
       tokenUsageTotal: newUsageTotal,
       tokenUsageThisMonth: newUsageThisMonth
@@ -265,7 +255,7 @@ export async function grantTokens(
   adminId: string
 ): Promise<{ success: boolean; newBalance: number; error?: string }> {
   // Check if admin has permission
-  const admin = getUserById(adminId);
+  const admin = await getUserById(adminId);
   if (!admin?.isAdmin) {
     console.warn('[TokenService] Unauthorized token grant attempt', { adminId, userId });
     return { success: false, newBalance: 0, error: 'Unauthorized' };
@@ -278,7 +268,7 @@ export async function grantTokens(
   const unlock = await acquireLock(userId);
 
   try {
-    const user = checkAndResetTokens(userId);
+    const user = await checkAndResetTokens(userId);
     if (!user) {
       return { success: false, newBalance: 0, error: 'User not found' };
     }
@@ -288,7 +278,7 @@ export async function grantTokens(
     const newBalance = currentBalance + amount;
 
     // CRITICAL FIX: Update user BEFORE releasing lock
-    const updatedUser = updateUser(userId, {
+    const updatedUser = await updateUser(userId, {
       tokenBalance: newBalance
     });
 
@@ -322,8 +312,8 @@ export interface UsageStats {
   daysUntilReset: number;
 }
 
-export function getUsageStats(userId: string): UsageStats | null {
-  const user = checkAndResetTokens(userId);
+export async function getUsageStats(userId: string): Promise<UsageStats | null> {
+  const user = await checkAndResetTokens(userId);
   if (!user) {
     return null;
   }

@@ -4,7 +4,6 @@
  */
 
 import { AGENTS } from '../config/agents';
-import { AgentId } from '../config/constants';
 
 /**
  * Validates and returns a valid agent ID

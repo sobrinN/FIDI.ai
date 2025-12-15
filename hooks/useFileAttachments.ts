@@ -10,7 +10,7 @@ import { FILE_LIMITS } from '../config/constants';
 interface UseFileAttachmentsReturn {
   attachments: Attachment[];
   isUploading: boolean;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void;
   removeAttachment: (index: number) => void;
   clearAttachments: () => void;

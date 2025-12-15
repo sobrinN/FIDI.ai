@@ -10,7 +10,7 @@ import { fileURLToPath } from 'url';
 import { AuthRequest } from '../middleware/auth.js';
 import { APIError } from '../middleware/errorHandler.js';
 import { grantTokens, getUsageStats } from '../lib/tokenService.js';
-import { getUserById } from '../lib/userStorage.js';
+import { getUserById, StoredUser } from '../lib/userStorage.js';
 
 // ES module __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -23,18 +23,22 @@ export const adminRouter = Router();
 /**
  * Middleware to check if user is admin
  */
-function requireAdmin(req: AuthRequest, _res: Response, next: NextFunction) {
-  if (!req.user) {
-    throw new APIError('Authentication required', 401, 'NO_USER');
-  }
+async function requireAdmin(req: AuthRequest, _res: Response, next: NextFunction) {
+  try {
+    if (!req.user) {
+      throw new APIError('Authentication required', 401, 'NO_USER');
+    }
 
-  const user = getUserById(req.user.id);
-  if (!user?.isAdmin) {
-    console.warn('[Admin] Unauthorized access attempt', { userId: req.user.id });
-    throw new APIError('Admin access required', 403, 'FORBIDDEN');
-  }
+    const user = await getUserById(req.user.id);
+    if (!user?.isAdmin) {
+      console.warn('[Admin] Unauthorized access attempt', { userId: req.user.id });
+      throw new APIError('Admin access required', 403, 'FORBIDDEN');
+    }
 
-  next();
+    next();
+  } catch (error) {
+    next(error);
+  }
 }
 
 /**
@@ -59,7 +63,7 @@ adminRouter.post('/tokens/grant', requireAdmin, async (req: AuthRequest, res, ne
     }
 
     // Verify target user exists
-    const targetUser = getUserById(userId);
+    const targetUser = await getUserById(userId);
     if (!targetUser) {
       throw new APIError('User not found', 404, 'USER_NOT_FOUND');
     }
@@ -92,7 +96,7 @@ adminRouter.post('/tokens/grant', requireAdmin, async (req: AuthRequest, res, ne
  * Get token statistics for a specific user (admin only)
  * GET /api/admin/tokens/stats/:userId
  */
-adminRouter.get('/tokens/stats/:userId', requireAdmin, (req: AuthRequest, res, next) => {
+adminRouter.get('/tokens/stats/:userId', requireAdmin, async (req: AuthRequest, res, next) => {
   try {
     const { userId } = req.params;
 
@@ -100,12 +104,12 @@ adminRouter.get('/tokens/stats/:userId', requireAdmin, (req: AuthRequest, res, n
       throw new APIError('Missing userId', 400, 'MISSING_USER_ID');
     }
 
-    const user = getUserById(userId);
+    const user = await getUserById(userId);
     if (!user) {
       throw new APIError('User not found', 404, 'USER_NOT_FOUND');
     }
 
-    const stats = getUsageStats(userId);
+    const stats = await getUsageStats(userId);
     if (!stats) {
       throw new APIError('Failed to get usage stats', 500, 'STATS_ERROR');
     }
@@ -132,11 +136,12 @@ adminRouter.get('/tokens/stats/:userId', requireAdmin, (req: AuthRequest, res, n
  * GET /api/admin/tokens/overview
  * FIX: Removed nested dynamic imports, simplified to direct file read
  */
-adminRouter.get('/tokens/overview', requireAdmin, (_req: AuthRequest, res, next) => {
+adminRouter.get('/tokens/overview', requireAdmin, (_req: AuthRequest, res, next): void => {
   try {
     // Check if users file exists
     if (!fs.existsSync(USERS_FILE)) {
-      return res.json({ users: [] });
+      res.json({ users: [] });
+      return;
     }
 
     // Read and parse users file
@@ -145,7 +150,7 @@ adminRouter.get('/tokens/overview', requireAdmin, (_req: AuthRequest, res, next)
     const users = parsed.users || [];
 
     // Map users to overview format with proper null coalescing
-    const overview = users.map((user: any) => ({
+    const overview = (users as StoredUser[]).map((user) => ({
       userId: user.id,
       email: user.email,
       name: user.name,

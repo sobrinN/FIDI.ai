@@ -151,7 +151,7 @@ authRouter.post('/register', async (req, res, next) => {
     }
 
     // Check if email already exists
-    if (emailExists(email.trim().toLowerCase())) {
+    if (await emailExists(email.trim().toLowerCase())) {
       throw new APIError('Email already registered', 409, 'EMAIL_EXISTS');
     }
 
@@ -168,7 +168,7 @@ authRouter.post('/register', async (req, res, next) => {
       updatedAt: now
     };
 
-    createUser(user);
+    await createUser(user);
 
     // Generate JWT token
     const token = generateToken({
@@ -208,7 +208,7 @@ authRouter.post('/login', async (req, res, next) => {
     }
 
     // Find user by email
-    const user = getUserByEmail(email.trim().toLowerCase());
+    const user = await getUserByEmail(email.trim().toLowerCase());
     if (!user) {
       throw new APIError('Invalid credentials', 401, 'INVALID_CREDENTIALS');
     }
@@ -251,7 +251,7 @@ authRouter.post('/logout', (_req, res) => {
   res.json({ message: 'Logged out successfully' });
 });
 
-authRouter.get('/me', (req, res, next) => {
+authRouter.get('/me', async (req, res, next) => {
   try {
     const token = req.cookies.auth_token;
     if (!token) {
@@ -262,7 +262,7 @@ authRouter.get('/me', (req, res, next) => {
     const user = verifyToken(token);
 
     // Get token usage stats
-    const tokenStats = getUsageStats(user.id);
+    const tokenStats = await getUsageStats(user.id);
 
     return res.json({
       authenticated: true,

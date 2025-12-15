@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { flushSync } from 'react-dom';
 import { Send, Menu, Plus, MessageSquare, Settings, X, Sparkles, ChevronLeft, Trash2, Activity, Paperclip, Loader2, FileText, ShieldAlert, Image as ImageIcon } from 'lucide-react';
 import { User, Message, Conversation, Attachment } from '../types';
 import { NeuralBackground } from './NeuralBackground';
@@ -41,7 +42,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
     currentId,
     setConversations,
     setCurrentId,
-    addConversation,
     updateConversation,
     deleteConversation
   } = useConversations(currentUser);
@@ -117,15 +117,18 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
     }
   }, [currentId, conversations]);
 
-  // Memoized getCurrentConversation to avoid stale closure issues
-  const getCurrentConversation = useCallback(() => {
-    return conversations.find(c => c.id === currentId);
-  }, [conversations, currentId]);
+  // Memoized current conversation to avoid repeated lookups
+  const currentConversation = useMemo(
+    () => conversations.find(c => c.id === currentId),
+    [conversations, currentId]
+  );
+
+  // Keep getCurrentConversation for compatibility but use memoized value
+  const getCurrentConversation = useCallback(() => currentConversation, [currentConversation]);
 
   const currentAgent = AGENTS[selectedAgentId];
 
   // Model locking logic - lock model per conversation after first message
-  const currentConversation = conversations.find(c => c.id === currentId);
   const canChangeModel = !currentConversation || currentConversation.messages.length === 0;
   const isModelLocked = !canChangeModel;
   const modelLockReason = isModelLocked
@@ -294,24 +297,48 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
 
   /**
    * Handles text chat streaming with OpenRouter
+   * @param conversationId - The ID of the conversation
+   * @param previousMessages - Messages to include in the context
+   * @param isNewConversation - If true, the conversation was just created and may not be in state yet
    */
-  const handleTextChatStream = async (conversationId: string, previousMessages: Message[]) => {
+  const handleTextChatStream = async (
+    conversationId: string,
+    previousMessages: Message[],
+    isNewConversation: boolean = false
+  ) => {
     const history = convertToOpenRouterHistory(previousMessages);
     let fullResponse = '';
     const tempAiMsgId = (Date.now() + 1).toString();
 
     // Add placeholder AI message using functional update to ensure latest state
+    // FIXED: For new conversations, we need to handle the case where the conversation
+    // might not be in state yet due to React's async state updates
     const placeholderMsg = createAssistantMessage('');
-    setConversations(prev => prev.map(conv => {
-      if (conv.id === conversationId) {
-        return {
-          ...conv,
-          messages: [...conv.messages, { ...placeholderMsg, id: tempAiMsgId }],
-          lastModified: Date.now()
-        };
+    setConversations(prev => {
+      const existingConv = prev.find(c => c.id === conversationId);
+
+      if (existingConv) {
+        // Conversation exists in state - update it
+        return prev.map(conv => {
+          if (conv.id === conversationId) {
+            return {
+              ...conv,
+              messages: [...conv.messages, { ...placeholderMsg, id: tempAiMsgId }],
+              lastModified: Date.now()
+            };
+          }
+          return conv;
+        });
+      } else if (isNewConversation) {
+        // New conversation not yet in state - this shouldn't happen with proper ordering
+        // but handle it gracefully by returning prev unchanged
+        // The addConversation call should have added it before we get here
+        console.warn('[ChatInterface] New conversation not found in state, will retry');
+        return prev;
       }
-      return conv;
-    }));
+
+      return prev;
+    });
 
     // Stream chat completion with selected model or agent default
     const modelToUse = selectedModel || currentAgent.model;
@@ -421,9 +448,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
       // Create or update conversation
       let conversationId = currentId;
       let previousMessages: Message[];
+      let isNewConversation = false;
 
       if (!conversationId) {
         // New conversation: create with the user message
+        isNewConversation = true;
         const now = Date.now();
         conversationId = now.toString();
         const newConv: Conversation = {
@@ -438,7 +467,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
           createdAt: now,
           updatedAt: now
         };
-        addConversation(newConv);
+
+        // Add the conversation to state
+        // FIXED: Use flushSync to ensure state updates are committed synchronously
+        // before we try to stream the response. This prevents race conditions where
+        // the conversation might not be in state when streaming handlers update it.
+        flushSync(() => {
+          setConversations(prev => [newConv, ...prev]);
+          setCurrentId(conversationId);
+        });
+
         previousMessages = [userMsg];
       } else {
         // Existing conversation: add user message using functional update
@@ -485,7 +523,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
       }
 
       // Default: regular text chat
-      await handleTextChatStream(conversationId, previousMessages);
+      // FIXED: Pass isNewConversation flag to handle potential state timing issues
+      await handleTextChatStream(conversationId, previousMessages, isNewConversation);
 
     } catch (error) {
       console.error("Error in handleSend:", error);

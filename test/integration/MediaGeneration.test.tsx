@@ -25,16 +25,10 @@ describe('Media Generation Integration Tests', () => {
     vi.clearAllMocks();
     localStorage.clear();
 
-    // Default mock implementations
-    vi.mocked(apiClient.generateImage).mockResolvedValue({
-      id: 'mock-image-123',
-      url: 'https://example.com/generated-image.png',
-    });
+    // Default mock implementations - return URL strings matching the actual API signatures
+    vi.mocked(apiClient.generateImage).mockResolvedValue('https://example.com/generated-image.png');
 
-    vi.mocked(apiClient.generateVideo).mockResolvedValue({
-      id: 'mock-video-456',
-      url: 'https://example.com/generated-video.mp4',
-    });
+    vi.mocked(apiClient.generateVideo).mockResolvedValue('https://example.com/generated-video.mp4');
   });
 
   describe('NENECA Agent Configuration', () => {
@@ -91,7 +85,7 @@ describe('Media Generation Integration Tests', () => {
       await user.type(input, 'Gere uma imagem');
 
       // Find send button (has Send icon)
-      const sendButtons = screen.getAllByRole('button');
+      const sendButtons = screen.getAllByRole('button') as HTMLButtonElement[];
       const sendButton = sendButtons.find((btn) => !btn.disabled);
 
       expect(sendButton).toBeTruthy();

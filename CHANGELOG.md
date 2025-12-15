@@ -5,6 +5,65 @@ All notable changes to FIDI.ai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2025-12-15
+
+### Fixed - Critical Race Conditions
+- **File Locking in userStorage.ts**: Implemented atomic file operations with exclusive 'wx' flag
+  - All CRUD operations (createUser, updateUser, deleteUser) now async with file locking
+  - Stale lock cleanup (30-second timeout) prevents deadlocks
+  - Atomic writes via temp file + rename pattern
+- **deleteConversation Race Condition**: Fixed stale closure issue in useConversations hook
+  - Removed currentId from dependencies to prevent stale references
+  - Used functional updates for both setConversations and setCurrentId
+- **handleSend Promise Timing**: Replaced setTimeout hack with React's flushSync
+  - Guarantees synchronous state commits before async operations
+  - Eliminates race condition between state update and conversation fetch
+
+### Added
+- **Token Pre-flight Check**: Added MIN_TOKENS_FOR_CHAT (100) validation before streaming
+  - Returns HTTP 402 with clear error message when tokens insufficient
+  - Skips check for FREE tier models (costMultiplier = 0)
+- **Expanded Model Adapter Support**: Added adapters for additional providers
+  - Google Gemini (geminiAdapter)
+  - Mistral (mistralAdapter)
+  - Qwen (qwenAdapter)
+  - Kwaipilot (defaultAdapter)
+  - MiniMax (defaultAdapter)
+- **useConversations Initialization State**: Exposed `isInitialized` flag for race condition prevention
+- **Centralized Token Migration**: `migrateUserTokenFields()` function in userStorage.ts
+
+### Changed
+- **All userStorage functions now async**: getUserById, getUserByEmail, emailExists, createUser, updateUser, deleteUser
+- **All route handlers updated**: auth.ts, admin.ts, tokenService.ts, tokenQuota.ts adapted for async userStorage
+- **RefObject Types Fixed**: Changed `RefObject<HTMLDivElement>` to `RefObject<HTMLDivElement | null>` in hooks
+- **Memoized Conversation Lookups**: Added useMemo for currentConversation in ChatInterface
+- **MarkdownRenderer Style Loading**: Fixed lazy loading with dynamic import + useState pattern
+
+### Fixed - TypeScript Errors
+- Installed missing @types/react-dom for flushSync types
+- Removed unused React imports (App.tsx, ErrorBoundary.tsx) - new JSX transform
+- Removed unused AgentId import (agentUtils.ts)
+- Fixed Toast.tsx useEffect return type
+- Fixed TrustSignals.tsx IntersectionObserver callback cleanup
+- Fixed test files mock return types and type assertions
+
+### Documentation
+- Complete rewrite of CLAUDE.md to v0.4.1
+  - Added File-based Storage section with locking mechanism
+  - Added Token System documentation (FREE/PAID/LEGACY tiers)
+  - Updated Project Structure with all new files
+  - Added Model Adapters section
+  - Comprehensive Recent Changes summary
+
+### Technical
+- 18 issues from js-fullstack-debugger agent resolved
+- Thread-safe file operations with proper lock cleanup
+- flushSync for guaranteed synchronous React state updates
+- Functional update patterns to avoid stale closures
+- Proper TypeScript null handling in RefObjects
+
+---
+
 ## [0.4.0] - 2025-12-13
 
 ### Added
@@ -228,6 +287,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 0.4.1 | 2025-12-15 | Critical race condition fixes, TypeScript improvements |
 | 0.4.0 | 2025-12-13 | Token quota system, FREE/PAID model selector |
 | 0.3.0 | 2025-12-09 | Documentation update, security hardening |
 | 0.2.0 | 2025-12-05 | Backend server integration, JWT auth |

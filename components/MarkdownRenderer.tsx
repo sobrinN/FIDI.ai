@@ -1,5 +1,6 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { Copy, Check } from 'lucide-react';
+import type { CSSProperties } from 'react';
 
 // Lazy load ReactMarkdown and syntax highlighter
 // This reduces initial bundle size by ~200KB
@@ -9,11 +10,9 @@ const SyntaxHighlighter = lazy(() =>
     default: mod.Prism,
   }))
 );
-const vscDarkPlus = lazy(() =>
-  import('react-syntax-highlighter/dist/esm/styles/prism').then((mod) => ({
-    default: mod.vscDarkPlus,
-  }))
-);
+
+// Type for syntax highlighter styles
+type SyntaxStyle = { [key: string]: CSSProperties };
 
 interface CodeBlockProps {
   language: string;
@@ -26,6 +25,14 @@ interface CodeBlockProps {
  */
 const CodeBlock = ({ language, value }: CodeBlockProps) => {
   const [copied, setCopied] = useState(false);
+  const [style, setStyle] = useState<SyntaxStyle | null>(null);
+
+  // Load style dynamically
+  useEffect(() => {
+    import('react-syntax-highlighter/dist/esm/styles/prism')
+      .then((mod) => setStyle(mod.vscDarkPlus as SyntaxStyle))
+      .catch(() => setStyle(null));
+  }, []);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(value);
@@ -60,20 +67,26 @@ const CodeBlock = ({ language, value }: CodeBlockProps) => {
           </pre>
         }
       >
-        <SyntaxHighlighter
-          language={language || 'text'}
-          style={vscDarkPlus}
-          customStyle={{
-            margin: 0,
-            borderRadius: '0.5rem',
-            padding: '1.5rem',
-            fontSize: '0.875rem',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-          }}
-          showLineNumbers={true}
-        >
-          {value}
-        </SyntaxHighlighter>
+        {style ? (
+          <SyntaxHighlighter
+            language={language || 'text'}
+            style={style}
+            customStyle={{
+              margin: 0,
+              borderRadius: '0.5rem',
+              padding: '1.5rem',
+              fontSize: '0.875rem',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+            }}
+            showLineNumbers={true}
+          >
+            {value}
+          </SyntaxHighlighter>
+        ) : (
+          <pre className="bg-gray-900 p-6 rounded-lg overflow-x-auto border border-white/10">
+            <code className="text-sm font-mono">{value}</code>
+          </pre>
+        )}
       </Suspense>
     </div>
   );

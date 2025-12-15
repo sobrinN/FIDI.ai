@@ -28,14 +28,18 @@ interface Message {
 
 /**
  * Model-specific parameters (e.g., temperature, max_tokens)
+ * Reserved for future use when model-specific parameter tuning is implemented
  */
-interface ModelParams {
+interface _ModelParams {
   temperature?: number;
   max_tokens?: number;
   top_p?: number;
   frequency_penalty?: number;
   presence_penalty?: number;
 }
+
+// Export to prevent unused warning (reserved for future use)
+export type ModelParams = _ModelParams;
 
 /**
  * Adapter function type
@@ -94,6 +98,22 @@ const claudeAdapter: AdapterFunction = defaultAdapter;
 const openaiAdapter: AdapterFunction = defaultAdapter;
 
 /**
+ * Google Gemini adapter - Uses standard system role
+ * Gemini models support the system role natively
+ */
+const geminiAdapter: AdapterFunction = defaultAdapter;
+
+/**
+ * Mistral adapter - Uses standard system role
+ */
+const mistralAdapter: AdapterFunction = defaultAdapter;
+
+/**
+ * Qwen adapter - Uses standard system role
+ */
+const qwenAdapter: AdapterFunction = defaultAdapter;
+
+/**
  * Model adapter registry
  * Maps model prefixes to their respective adapter functions
  */
@@ -101,6 +121,7 @@ const adapterRegistry: Record<string, AdapterFunction> = {
   // X.AI models
   'x-ai': grokAdapter,
   'x-ai/grok': grokAdapter,
+  'x-ai/glm': defaultAdapter, // GLM models use standard system role
 
   // Anthropic models
   'anthropic': claudeAdapter,
@@ -109,6 +130,22 @@ const adapterRegistry: Record<string, AdapterFunction> = {
   // OpenAI models
   'openai': openaiAdapter,
   'openai/gpt': openaiAdapter,
+
+  // Google Gemini models
+  'google': geminiAdapter,
+  'google/gemini': geminiAdapter,
+
+  // Mistral models
+  'mistralai': mistralAdapter,
+
+  // Qwen models
+  'qwen': qwenAdapter,
+
+  // Kwaipilot models
+  'kwaipilot': defaultAdapter,
+
+  // MiniMax models
+  'minimax': defaultAdapter,
 
   // Default fallback
   'default': defaultAdapter

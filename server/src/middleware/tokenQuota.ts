@@ -13,35 +13,39 @@ import { hasTokens, getTokenBalance } from '../lib/tokenService.js';
  * Returns 402 Payment Required if insufficient tokens
  */
 export function checkTokenQuota(requiredTokens: number) {
-  return (req: AuthRequest, _res: Response, next: NextFunction) => {
-    if (!req.user) {
-      throw new APIError('Authentication required', 401, 'NO_USER');
-    }
+  return async (req: AuthRequest, _res: Response, next: NextFunction) => {
+    try {
+      if (!req.user) {
+        throw new APIError('Authentication required', 401, 'NO_USER');
+      }
 
-    const userId = req.user.id;
-    const currentBalance = getTokenBalance(userId);
+      const userId = req.user.id;
+      const currentBalance = await getTokenBalance(userId);
 
-    if (!hasTokens(userId, requiredTokens)) {
-      console.warn('[TokenQuota] Insufficient tokens', {
+      if (!(await hasTokens(userId, requiredTokens))) {
+        console.warn('[TokenQuota] Insufficient tokens', {
+          userId,
+          required: requiredTokens,
+          available: currentBalance
+        });
+
+        throw new APIError(
+          `Insufficient tokens. Required: ${requiredTokens}, Available: ${currentBalance}. Tokens reset monthly.`,
+          402,
+          'INSUFFICIENT_TOKENS'
+        );
+      }
+
+      console.log('[TokenQuota] Pre-flight check passed', {
         userId,
         required: requiredTokens,
         available: currentBalance
       });
 
-      throw new APIError(
-        `Insufficient tokens. Required: ${requiredTokens}, Available: ${currentBalance}. Tokens reset monthly.`,
-        402,
-        'INSUFFICIENT_TOKENS'
-      );
+      next();
+    } catch (error) {
+      next(error);
     }
-
-    console.log('[TokenQuota] Pre-flight check passed', {
-      userId,
-      required: requiredTokens,
-      available: currentBalance
-    });
-
-    next();
   };
 }
 

@@ -4,7 +4,7 @@ import { APIError } from '../middleware/errorHandler.js';
 import { AuthRequest } from '../middleware/auth.js';
 import { formatMessagesForModel } from '../lib/modelAdapters.js';
 import { isAllowedModel, getAllowedModelsString, getModelCostMultiplier } from '../config/allowedModels.js';
-import { deductTokens } from '../lib/tokenService.js';
+import { deductTokens, getTokenBalance } from '../lib/tokenService.js';
 
 export const chatRouter = Router();
 
@@ -12,6 +12,7 @@ export const chatRouter = Router();
 const MAX_MESSAGES_PER_CONVERSATION = 1000;
 const MAX_MESSAGE_LENGTH = 32000; // 32KB per message
 const STREAM_TIMEOUT_MS = 120000; // 2 minutes
+const MIN_TOKENS_FOR_CHAT = 100; // Minimum tokens required to start a chat
 
 /**
  * Sanitize user input to prevent prompt injection
@@ -110,8 +111,7 @@ const getOpenRouterClient = () => {
   }
 
   return new OpenRouter({
-    apiKey,
-    baseURL: 'https://openrouter.ai/api/v1'
+    apiKey
   });
 };
 
@@ -140,6 +140,20 @@ chatRouter.post('/stream', async (req: AuthRequest, res, next) => {
     // Validate and sanitize messages (includes message count limit check)
     const validatedMessages = validateMessages(messages);
 
+    // Pre-flight token check: ensure user has minimum tokens before streaming
+    // For FREE tier models (costMultiplier = 0), skip the check
+    const costMultiplier = getModelCostMultiplier(model);
+    if (costMultiplier > 0 && req.user) {
+      const currentBalance = await getTokenBalance(req.user.id);
+      if (currentBalance < MIN_TOKENS_FOR_CHAT) {
+        throw new APIError(
+          `Insufficient tokens. Required: at least ${MIN_TOKENS_FOR_CHAT}, Available: ${currentBalance}. Tokens reset monthly.`,
+          402,
+          'INSUFFICIENT_TOKENS'
+        );
+      }
+    }
+
     const openRouter = getOpenRouterClient();
 
     // Set SSE headers
@@ -157,9 +171,10 @@ chatRouter.post('/stream', async (req: AuthRequest, res, next) => {
       const formattedMessages = formatMessagesForModel(model, systemPrompt, validatedMessages);
 
       // Request usage data from OpenRouter
+      // Cast messages to any to handle SDK type mismatch (our Message type is compatible at runtime)
       const stream = await openRouter.chat.send({
         model,
-        messages: formattedMessages,
+        messages: formattedMessages as any,
         stream: true,
         streamOptions: {
           includeUsage: true
@@ -170,7 +185,6 @@ chatRouter.post('/stream', async (req: AuthRequest, res, next) => {
 
       let totalTokensUsed = 0;
       let usageCaptured = false;
-      let streamSuccessful = false;
 
       for await (const chunk of stream) {
         const content = chunk.choices?.[0]?.delta?.content;
@@ -184,8 +198,6 @@ chatRouter.post('/stream', async (req: AuthRequest, res, next) => {
           usageCaptured = true;
         }
       }
-
-      streamSuccessful = true;
 
       // FIX: Handle missing usage data from OpenRouter
       if (!usageCaptured || totalTokensUsed === 0) {

@@ -74,16 +74,22 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
           throw new Error(errorData.error || 'Invalid credentials.');
         }
 
-        const successData = data as AuthSuccessResponse;
-        const userData: User = {
-          id: successData.user.id,
-          name: successData.user.name,
-          email: successData.user.email
-        };
+        // After successful login, fetch complete user data (includes tokenBalance)
+        const meResponse = await fetch(`${API_URL}/api/auth/me`, {
+          method: 'GET',
+          credentials: 'include',
+        });
 
-        // Save session to localStorage (only non-sensitive data)
+        if (!meResponse.ok) {
+          throw new Error('Failed to fetch user data after login');
+        }
+
+        const meData = await meResponse.json();
+        const completeUserData: User = meData.user;
+
+        // Save complete session to localStorage
         try {
-          setUserSession(userData);
+          setUserSession(completeUserData);
         } catch (storageError) {
           if (storageError instanceof StorageError && storageError.code === 'QUOTA_EXCEEDED') {
             throw new Error('Local storage is full. Please clear some data.');
@@ -94,7 +100,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
 
         setSuccess('Identity confirmed.');
         setTimeout(() => {
-          onLogin(userData);
+          onLogin(completeUserData);
         }, 1000);
       } else {
         // Register - Call backend API
