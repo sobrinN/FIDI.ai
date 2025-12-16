@@ -5,6 +5,21 @@ All notable changes to FIDI.ai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] - 2025-12-16
+
+### Changed
+- **Documentation Cleanup**: Removed redundant markdown files for better maintainability
+  - Deleted STARTUP.md (contained exposed API keys - security risk)
+  - Deleted COMPONENT_VISUAL_REFERENCE.md (overly detailed component docs)
+  - Deleted FRONTEND_TOKEN_IMPLEMENTATION.md (historical implementation notes)
+  - Deleted TESTING_CHECKLIST.md (outdated testing checklist)
+  - Deleted server/CRITICAL_FIXES_APPLIED.md (historical fixes log)
+
+### Security
+- **Removed Exposed API Keys**: STARTUP.md contained plaintext API keys and has been deleted
+
+---
+
 ## [0.4.1] - 2025-12-15
 
 ### Fixed - Critical Race Conditions
@@ -287,6 +302,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 0.4.4 | 2025-12-16 | Documentation cleanup, removed exposed API keys |
 | 0.4.1 | 2025-12-15 | Critical race condition fixes, TypeScript improvements |
 | 0.4.0 | 2025-12-13 | Token quota system, FREE/PAID model selector |
 | 0.3.0 | 2025-12-09 | Documentation update, security hardening |

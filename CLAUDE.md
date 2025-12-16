@@ -282,7 +282,7 @@ LEGACY Models (1.0x multiplier):
 - MiniMax: Standard system role
 - Kwaipilot: Standard system role
 
-### File-based Storage (v0.4.1)
+### File-based Storage (v0.4.4)
 
 **User Storage** (`server/src/lib/userStorage.ts`):
 - File locking with `users.lock` file
@@ -422,7 +422,7 @@ DEFAULT_TOKEN_BALANCE: 50000    // Initial/reset balance
 - Reveal.tsx for scroll-triggered animations
 - `flushSync` for critical synchronous state updates
 
-### Async Patterns (v0.4.1)
+### Async Patterns (v0.4.4)
 All user storage and token operations are now async:
 ```typescript
 // Example: Auth route
@@ -453,7 +453,7 @@ npm run test:coverage # Coverage report
 
 See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 
-## Recent Changes (v0.4.1)
+## Recent Changes (v0.4.4)
 
 ### Critical Fixes
 - File locking system for race-safe user storage

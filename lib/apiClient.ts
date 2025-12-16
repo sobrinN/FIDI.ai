@@ -4,6 +4,7 @@
  */
 
 import { RETRY } from '../config/constants';
+import { ErrorType } from './errorTypes';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -11,12 +12,18 @@ export class APIError extends Error {
   constructor(
     message: string,
     public statusCode: number,
-    public code: string
+    public code: string,
+    public errorType?: ErrorType,
+    public attemptedModels?: string[],
+    public fallbackUsed?: boolean,
+    public retryable?: boolean,
+    public technicalDetails?: string
   ) {
     super(message);
     this.name = 'APIError';
   }
 }
+
 
 async function handleResponse(response: Response) {
   if (!response.ok) {
@@ -30,18 +37,30 @@ async function handleResponse(response: Response) {
       throw new APIError(
         error.error || 'Insufficient tokens',
         402,
-        'INSUFFICIENT_TOKENS'
+        'INSUFFICIENT_TOKENS',
+        ErrorType.INSUFFICIENT_TOKENS,
+        error.attemptedModels,
+        false,
+        false,
+        error.technicalDetails
       );
     }
 
+    // Enhanced error with all metadata from backend
     throw new APIError(
       error.error || 'Request failed',
       response.status,
-      error.code || 'UNKNOWN'
+      error.code || 'UNKNOWN',
+      error.errorType,
+      error.attemptedModels,
+      error.fallbackUsed,
+      error.retryable,
+      error.technicalDetails
     );
   }
   return response;
 }
+
 
 export interface StreamChatParams {
   model: string;
@@ -53,7 +72,9 @@ export interface StreamChatParams {
   onChunk: (text: string) => void;
   onComplete: () => void;
   onError: (error: Error) => void;
+  onFallback?: (primaryModel: string, actualModel: string, message: string) => void;
 }
+
 
 export async function streamChatCompletion({
   model,
@@ -61,7 +82,8 @@ export async function streamChatCompletion({
   messages,
   onChunk,
   onComplete,
-  onError
+  onError,
+  onFallback
 }: StreamChatParams): Promise<void> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 min timeout
@@ -103,11 +125,33 @@ export async function streamChatCompletion({
 
         try {
           const parsed = JSON.parse(data);
+
+          // Handle error responses
           if (parsed.error) {
-            throw new APIError(parsed.error, 500, 'STREAM_ERROR');
+            throw new APIError(
+              parsed.error,
+              parsed.statusCode || 500,
+              parsed.code || 'STREAM_ERROR',
+              parsed.errorType,
+              parsed.attemptedModels,
+              parsed.fallbackUsed,
+              parsed.retryable,
+              parsed.technicalDetails
+            );
           }
+
+          // Handle content chunks
           if (parsed.content) {
             onChunk(parsed.content);
+          }
+
+          // Handle fallback notification
+          if (parsed.fallback?.used && onFallback) {
+            onFallback(
+              parsed.fallback.primaryModel,
+              parsed.fallback.actualModel,
+              parsed.fallback.message
+            );
           }
         } catch (e) {
           if (e instanceof APIError) throw e;
@@ -133,12 +177,13 @@ export async function streamChatCompletion({
     clearTimeout(timeoutId);
 
     if (error instanceof Error && error.name === 'AbortError') {
-      onError(new APIError('Request timeout', 408, 'TIMEOUT'));
+      onError(new APIError('Request timeout', 408, 'TIMEOUT', ErrorType.TIMEOUT));
     } else {
       onError(error as Error);
     }
   }
 }
+
 
 export async function generateImage(prompt: string): Promise<string> {
   return retryWithBackoff(async () => {

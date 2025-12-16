@@ -1,7 +1,7 @@
 # FIDI.ai Project Context
 
-**Version:** 0.3.0
-**Last Updated:** 2025-12-09
+**Version:** 0.4.4
+**Last Updated:** 2025-12-16
 
 ## Project Overview
 
@@ -163,6 +163,9 @@ Agents defined in `config/agents.ts`:
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 0.4.4 | 2025-12-16 | Documentation cleanup, removed exposed API keys |
+| 0.4.1 | 2025-12-15 | Race condition fixes, TypeScript improvements |
+| 0.4.0 | 2025-12-13 | Token quota system, model selector |
 | 0.3.0 | 2025-12-09 | Documentation update, security hardening |
 | 0.2.0 | 2025-12-05 | Backend server, JWT auth, rate limiting |
 | 0.1.x | 2025-11-29 | Initial release, core features |
@@ -171,4 +174,4 @@ See [CHANGELOG.md](./CHANGELOG.md) for complete history.
 
 ---
 
-**Built by FIDI.ai Team** | v0.3.0
+**Built by FIDI.ai Team** | v0.4.4

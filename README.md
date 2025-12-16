@@ -146,4 +146,4 @@ MIT
 
 ---
 
-**Built by FIDI.ai Team** | v0.3.0
+**Built by FIDI.ai Team** | v0.4.4

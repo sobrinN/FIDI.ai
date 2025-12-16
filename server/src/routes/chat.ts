@@ -5,6 +5,9 @@ import { AuthRequest } from '../middleware/auth.js';
 import { formatMessagesForModel } from '../lib/modelAdapters.js';
 import { isAllowedModel, getAllowedModelsString, getModelCostMultiplier } from '../config/allowedModels.js';
 import { deductTokens, getTokenBalance } from '../lib/tokenService.js';
+import { getModelsToAttempt } from '../config/fallbackConfig.js';
+import { classifyError, shouldTriggerFallback, isTerminalError, ErrorType } from '../lib/errorClassifier.js';
+
 
 export const chatRouter = Router();
 
@@ -166,93 +169,210 @@ chatRouter.post('/stream', async (req: AuthRequest, res, next) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), STREAM_TIMEOUT_MS);
 
-    try {
-      // Use model adapter to format messages appropriately for each model
-      const formattedMessages = formatMessagesForModel(model, systemPrompt, validatedMessages);
+    // FALLBACK LOGIC: Get models to attempt (primary + fallbacks)
+    const modelsToAttempt = getModelsToAttempt(model);
+    const attemptedModels: string[] = [];
+    let lastClassifiedError: any = null;
+    let successfulModel: string | null = null;
 
-      // Request usage data from OpenRouter
-      // Cast messages to any to handle SDK type mismatch (our Message type is compatible at runtime)
-      const stream = await openRouter.chat.send({
-        model,
-        messages: formattedMessages as any,
-        stream: true,
-        streamOptions: {
-          includeUsage: true
-        }
-      }, {
-        signal: controller.signal
-      });
+    /**
+     * Helper function to attempt streaming with a specific model
+     */
+    async function attemptStreamWithModel(currentModel: string): Promise<boolean> {
+      attemptedModels.push(currentModel);
+      console.log(`[Chat Fallback] Attempting model: ${currentModel} (attempt ${attemptedModels.length}/${modelsToAttempt.length})`);
 
-      let totalTokensUsed = 0;
-      let usageCaptured = false;
+      try {
+        // Use model adapter to format messages appropriately for each model
+        const formattedMessages = formatMessagesForModel(currentModel, systemPrompt, validatedMessages);
 
-      for await (const chunk of stream) {
-        const content = chunk.choices?.[0]?.delta?.content;
-        if (content) {
-          res.write(`data: ${JSON.stringify({ content })}\n\n`);
-        }
-
-        // Capture token usage from final chunk
-        if (chunk.usage?.totalTokens) {
-          totalTokensUsed = chunk.usage.totalTokens;
-          usageCaptured = true;
-        }
-      }
-
-      // FIX: Handle missing usage data from OpenRouter
-      if (!usageCaptured || totalTokensUsed === 0) {
-        console.warn('[Chat] No usage data received from OpenRouter for request. Unable to deduct tokens.');
-        res.write(`data: ${JSON.stringify({
-          warning: 'Token usage could not be tracked for this request'
-        })}\n\n`);
-      }
-
-      // Deduct tokens after successful stream completion (only if we have usage data)
-      if (usageCaptured && totalTokensUsed > 0 && req.user) {
-        try {
-          // Get cost multiplier for this model (0 for FREE, 1.5 for PAID, 1.0 for LEGACY)
-          const costMultiplier = getModelCostMultiplier(model);
-          const actualCost = Math.ceil(totalTokensUsed * costMultiplier);
-
-          const deductionResult = await deductTokens(
-            req.user.id,
-            totalTokensUsed,
-            `Chat completion (${model})`,
-            costMultiplier
-          );
-
-          // Send usage info to client with multiplier details
-          if (deductionResult.success) {
-            res.write(`data: ${JSON.stringify({
-              usage: {
-                tokens: totalTokensUsed,
-                costMultiplier: costMultiplier,
-                actualCost: actualCost,
-                newBalance: deductionResult.newBalance
-              }
-            })}\n\n`);
-          } else {
-            console.error('[Chat] Failed to deduct tokens:', deductionResult.error);
-            res.write(`data: ${JSON.stringify({
-              warning: 'Token deduction failed',
-              error: deductionResult.error
-            })}\n\n`);
+        // Request usage data from OpenRouter
+        // Cast messages to any to handle SDK type mismatch (our Message type is compatible at runtime)
+        const stream = await openRouter.chat.send({
+          model: currentModel,
+          messages: formattedMessages as any,
+          stream: true,
+          streamOptions: {
+            includeUsage: true
           }
-        } catch (error) {
-          console.error('[Chat] Exception during token deduction:', error);
+        }, {
+          signal: controller.signal
+        });
+
+        let totalTokensUsed = 0;
+        let usageCaptured = false;
+
+        // Stream content to client
+        for await (const chunk of stream) {
+          const content = chunk.choices?.[0]?.delta?.content;
+          if (content) {
+            res.write(`data: ${JSON.stringify({ content })}\n\n`);
+          }
+
+          // Capture token usage from final chunk
+          if (chunk.usage?.totalTokens) {
+            totalTokensUsed = chunk.usage.totalTokens;
+            usageCaptured = true;
+          }
+        }
+
+        // FIX: Handle missing usage data from OpenRouter
+        if (!usageCaptured || totalTokensUsed === 0) {
+          console.warn('[Chat] No usage data received from OpenRouter for request. Unable to deduct tokens.');
           res.write(`data: ${JSON.stringify({
-            warning: 'Token deduction failed due to exception'
+            warning: 'Token usage could not be tracked for this request'
           })}\n\n`);
         }
+
+        // Deduct tokens after successful stream completion (only if we have usage data)
+        if (usageCaptured && totalTokensUsed > 0 && req.user) {
+          try {
+            // Get cost multiplier for this model (0 for FREE, 1.5 for PAID, 1.0 for LEGACY)
+            const costMultiplier = getModelCostMultiplier(currentModel);
+            const actualCost = Math.ceil(totalTokensUsed * costMultiplier);
+
+            const deductionResult = await deductTokens(
+              req.user.id,
+              totalTokensUsed,
+              `Chat completion (${currentModel})`,
+              costMultiplier
+            );
+
+            // Send usage info to client with multiplier details
+            if (deductionResult.success) {
+              res.write(`data: ${JSON.stringify({
+                usage: {
+                  tokens: totalTokensUsed,
+                  costMultiplier: costMultiplier,
+                  actualCost: actualCost,
+                  newBalance: deductionResult.newBalance
+                }
+              })}\n\n`);
+            } else {
+              console.error('[Chat] Failed to deduct tokens:', deductionResult.error);
+              res.write(`data: ${JSON.stringify({
+                warning: 'Token deduction failed',
+                error: deductionResult.error
+              })}\n\n`);
+            }
+          } catch (error) {
+            console.error('[Chat] Exception during token deduction:', error);
+            res.write(`data: ${JSON.stringify({
+              warning: 'Token deduction failed due to exception'
+            })}\n\n`);
+          }
+        }
+
+        // Success! Mark which model was used
+        successfulModel = currentModel;
+
+        // Notify client if fallback was used
+        if (currentModel !== model) {
+          res.write(`data: ${JSON.stringify({
+            fallback: {
+              used: true,
+              primaryModel: model,
+              actualModel: currentModel,
+              message: `Primary model unavailable. Response generated with ${currentModel}`
+            }
+          })}\n\n`);
+        }
+
+        return true; // Success
+      } catch (error) {
+        // Classify the error
+        const classified = classifyError(error);
+        lastClassifiedError = classified;
+
+        console.error(`[Chat Fallback] Model ${currentModel} failed:`, {
+          type: classified.type,
+          message: classified.userFriendlyMessage,
+          retryable: classified.retryable
+        });
+
+        // Check if this is a terminal error (should not retry)
+        if (isTerminalError(classified)) {
+          console.log(`[Chat Fallback] Terminal error detected, stopping fallback attempts`);
+          throw new APIError(
+            classified.userFriendlyMessage,
+            classified.statusCode,
+            classified.type,
+            classified.type,
+            classified.retryable,
+            {
+              attemptedModels,
+              technicalDetails: classified.technicalDetails
+            }
+          );
+        }
+
+        // Check if we should trigger fallback
+        if (!shouldTriggerFallback(classified)) {
+          console.log(`[Chat Fallback] Error not suitable for fallback, stopping`);
+          throw new APIError(
+            classified.userFriendlyMessage,
+            classified.statusCode,
+            classified.type,
+            classified.type,
+            classified.retryable,
+            {
+              attemptedModels,
+              technicalDetails: classified.technicalDetails
+            }
+          );
+        }
+
+        return false; // Failed but can retry
+      }
+    }
+
+    try {
+      // Try each model in sequence until one succeeds
+      for (const currentModel of modelsToAttempt) {
+        const success = await attemptStreamWithModel(currentModel);
+        if (success) {
+          break; // Success! Exit loop
+        }
+
+        // If not the last model, log that we're trying fallback
+        const remainingModels = modelsToAttempt.slice(modelsToAttempt.indexOf(currentModel) + 1);
+        if (remainingModels.length > 0) {
+          console.log(`[Chat Fallback] Trying next fallback: ${remainingModels[0]}`);
+        }
       }
 
+      // If we exhausted all models without success
+      if (!successfulModel) {
+        console.error(`[Chat Fallback] All models exhausted. Attempted: ${attemptedModels.join(', ')}`);
+
+        const errorData = {
+          error: lastClassifiedError?.userFriendlyMessage || 'All models failed to respond',
+          code: lastClassifiedError?.type || ErrorType.UNKNOWN,
+          errorType: lastClassifiedError?.type || ErrorType.UNKNOWN,
+          attemptedModels,
+          allFailed: true,
+          retryable: false,
+          technicalDetails: lastClassifiedError?.technicalDetails
+        };
+
+        res.write(`data: ${JSON.stringify(errorData)}\n\n`);
+        res.end();
+        clearTimeout(timeoutId);
+        return;
+      }
+
+      // Successful completion
       res.write('data: [DONE]\n\n');
       res.end();
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
+        const classified = classifyError(error);
         res.write(`data: ${JSON.stringify({
-          error: 'Stream timeout - request exceeded 2 minute limit',
-          code: 'TIMEOUT'
+          error: classified.userFriendlyMessage,
+          code: classified.type,
+          errorType: classified.type,
+          attemptedModels,
+          retryable: classified.retryable
         })}\n\n`);
         res.end();
       } else {

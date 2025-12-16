@@ -15,7 +15,7 @@ import { MarkdownRenderer } from './MarkdownRenderer';
 import { MESSAGE_LIMITS, UI } from '../config/constants';
 import { TokenBalance } from './TokenBalance';
 import { ModelSelector } from './ModelSelector';
-import { getModelInfo } from '../config/models';
+
 
 interface ChatInterfaceProps {
   onBack: () => void;
@@ -53,6 +53,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
   const [isTyping, setIsTyping] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string | null>(null);
   const [isKeySet, setIsKeySet] = useState<boolean>(true);
+  const [fallbackNotification, setFallbackNotification] = useState<{ primaryModel: string; actualModel: string; message: string } | null>(null);
+
 
   // File attachments hook
   const {
@@ -367,6 +369,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
         setIsTyping(false);
         setProcessingStatus(null);
       },
+      onFallback: (primaryModel: string, actualModel: string, message: string) => {
+        // Show fallback notification without disrupting the stream
+        console.log(`[Fallback] ${message}`);
+        setFallbackNotification({ primaryModel, actualModel, message });
+
+        // Auto-dismiss after 10 seconds
+        setTimeout(() => {
+          setFallbackNotification(null);
+        }, 10000);
+      },
       onError: (error: Error) => {
         if (!isMountedRef.current) return;
         console.error('OpenRouter Error:', error);
@@ -375,19 +387,57 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
           setIsKeySet(false);
         }
 
-        // Determine error message
+        // Enhanced error message formatting
         let errorContent: string;
+        const apiError = error as APIError;
 
-        if (error instanceof APIError && error.code === 'INSUFFICIENT_TOKENS') {
+        // Build enhanced error message with details
+        if (apiError.errorType === 'INSUFFICIENT_TOKENS' || apiError.code === 'INSUFFICIENT_TOKENS') {
           const daysText = currentUser?.daysUntilReset === 1 ? 'day' : 'days';
-          errorContent = `**Insufficient Tokens**\n\n` +
+          errorContent = `**⚠️ Insufficient Tokens**\n\n` +
             `You don't have enough tokens to send this message. Your current balance is ${currentUser?.tokenBalance?.toLocaleString() || 0} tokens.\n\n` +
             `Your token balance will automatically reset in ${currentUser?.daysUntilReset || 0} ${daysText}.\n\n` +
             `Each message typically uses 100-500 tokens depending on length and complexity.`;
-        } else if (error.message?.includes('403') || error.message?.includes('401')) {
-          errorContent = "Authentication error: Check your OPENROUTER_API_KEY in server/.env";
+        } else if (apiError.errorType === 'RATE_LIMIT') {
+          errorContent = `**🚫 Rate Limit Exceeded**\n\n` +
+            `The model is currently rate limited due to high demand.\n\n` +
+            (apiError.attemptedModels && apiError.attemptedModels.length > 1
+              ? `Attempted models: ${apiError.attemptedModels.join(', ')}\n\n`
+              : '') +
+            `Please try again in a few moments or select a different model.`;
+        } else if (apiError.errorType === 'DATA_POLICY') {
+          errorContent = `**🔒 Content Policy Violation**\n\n` +
+            `Your request may violate the model's content policy.\n\n` +
+            `Please try rephrasing your message or use a different model.`;
+        } else if (apiError.errorType === 'UNAVAILABLE') {
+          errorContent = `**⚠️ Model Unavailable**\n\n` +
+            `The requested model is temporarily unavailable.\n\n` +
+            (apiError.attemptedModels && apiError.attemptedModels.length > 1
+              ? `We attempted: ${apiError.attemptedModels.join(', ')}\n\n`
+              : '') +
+            `Please try again later or select a different model.`;
+        } else if (apiError.errorType === 'MISCONFIGURED' || error.message?.includes('403') || error.message?.includes('401')) {
+          errorContent = `**🔐 Server Configuration Error**\n\n` +
+            `Authentication failed. Please verify your OPENROUTER_API_KEY is correctly set in server/.env\n\n` +
+            `Make sure the backend server is running on port 3001.`;
+        } else if (apiError.errorType === 'TIMEOUT') {
+          errorContent = `**⏱️ Request Timeout**\n\n` +
+            `The request exceeded the 2-minute time limit.\n\n` +
+            `The model may be overloaded. Please try again with a shorter prompt.`;
         } else {
-          errorContent = `Connection error: ${error.message || 'Please try again.'}`;
+          // Generic error with enhanced details
+          errorContent = `**❌ Connection Error**\n\n` +
+            `${error.message || 'An unexpected error occurred.'}\n\n`;
+
+          // Add attempted models if available
+          if (apiError.attemptedModels && apiError.attemptedModels.length > 0) {
+            errorContent += `Attempted models: ${apiError.attemptedModels.join(', ')}\n\n`;
+          }
+
+          // Add technical details if available (collapsed)
+          if (apiError.technicalDetails) {
+            errorContent += `\n\n<details>\n<summary>Technical Details</summary>\n\n${apiError.technicalDetails}\n</details>`;
+          }
         }
 
         setConversations(prev => prev.map(conv => {
@@ -551,44 +601,76 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
 
   return (
     <div className="flex h-screen bg-black overflow-hidden relative">
-       {/* Background */}
-       <div className="absolute inset-0 z-0">
-         <NeuralBackground />
-         <div className={`absolute inset-0 bg-gradient-to-br ${currentAgent.bgGradient} to-black/90 opacity-40 mix-blend-overlay transition-colors duration-1000`} />
-       </div>
+      {/* Background */}
+      <div className="absolute inset-0 z-0">
+        <NeuralBackground />
+        <div className={`absolute inset-0 bg-gradient-to-br ${currentAgent.bgGradient} to-black/90 opacity-40 mix-blend-overlay transition-colors duration-1000`} />
+      </div>
 
-       {/* API Key Modal Overlay */}
-       <AnimatePresence>
-         {!isKeySet && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-6"
-            >
-               <div className="glass-panel max-w-md w-full p-8 rounded-2xl border border-blue-500/30 text-center shadow-[0_0_50px_rgba(0,0,0,0.8)]">
-                  <ShieldAlert className="w-16 h-16 text-blue-500 mx-auto mb-6 animate-pulse" />
-                  <h2 className="font-display text-2xl text-white mb-2">Server Unavailable</h2>
-                  <p className="font-sans text-blue-200 mb-8 leading-relaxed">
-                    The backend server is not responding.<br/>
-                    Start the server in: server/ with 'npm run dev'<br/>
-                    Default port: 3001
-                  </p>
+      {/* API Key Modal Overlay */}
+      <AnimatePresence>
+        {!isKeySet && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-6"
+          >
+            <div className="glass-panel max-w-md w-full p-8 rounded-2xl border border-blue-500/30 text-center shadow-[0_0_50px_rgba(0,0,0,0.8)]">
+              <ShieldAlert className="w-16 h-16 text-blue-500 mx-auto mb-6 animate-pulse" />
+              <h2 className="font-display text-2xl text-white mb-2">Server Unavailable</h2>
+              <p className="font-sans text-blue-200 mb-8 leading-relaxed">
+                The backend server is not responding.<br />
+                Start the server in: server/ with 'npm run dev'<br />
+                Default port: 3001
+              </p>
 
-                  <button
-                    onClick={handleSelectKey}
-                    className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)] flex items-center justify-center gap-2 group"
-                  >
-                    <Activity size={20} />
-                    VIEW INSTRUCTIONS
-                  </button>
-                  <p className="mt-4 text-xs text-blue-500/60 font-mono">
-                    FIDI API Server at localhost:3001
+              <button
+                onClick={handleSelectKey}
+                className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)] flex items-center justify-center gap-2 group"
+              >
+                <Activity size={20} />
+                VIEW INSTRUCTIONS
+              </button>
+              <p className="mt-4 text-xs text-blue-500/60 font-mono">
+                FIDI API Server at localhost:3001
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Fallback Notification Toast */}
+      <AnimatePresence>
+        {fallbackNotification && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-20 left-1/2 transform -translate-x-1/2 z-50 max-w-lg"
+          >
+            <div className="bg-gradient-to-r from-yellow-900/90 to-orange-900/90 backdrop-blur-xl border border-yellow-500/50 rounded-xl p-4 shadow-2xl">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-yellow-500/20 flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-yellow-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-white text-sm mb-1">Model Fallback</h4>
+                  <p className="text-yellow-200 text-xs leading-relaxed">
+                    {fallbackNotification.message}
                   </p>
-               </div>
-            </motion.div>
-         )}
-       </AnimatePresence>
+                </div>
+                <button
+                  onClick={() => setFallbackNotification(null)}
+                  className="flex-shrink-0 text-yellow-400 hover:text-white transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Sidebar */}
       <div className={`fixed inset-y-0 left-0 z-30 w-72 bg-black/80 backdrop-blur-xl border-r border-blue-900/30 transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 flex flex-col`}>
@@ -621,25 +703,22 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
                 onClick={() => handleAgentSwitch(agent.id as keyof typeof AGENTS)}
                 title={`${agent.name} - ${agent.role}`}
                 aria-label={`Select ${agent.name} agent - ${agent.role}`}
-                className={`relative group p-2 rounded-lg border transition-all duration-300 ${
-                  selectedAgentId === agent.id
-                    ? `${agent.borderColor} bg-gradient-to-br ${agent.bgGradient} to-black/50 shadow-lg`
-                    : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
-                }`}
+                className={`relative group p-2 rounded-lg border transition-all duration-300 ${selectedAgentId === agent.id
+                  ? `${agent.borderColor} bg-gradient-to-br ${agent.bgGradient} to-black/50 shadow-lg`
+                  : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
+                  }`}
               >
                 <div className="flex flex-col items-center gap-1.5">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                    selectedAgentId === agent.id ? 'bg-black/30' : 'bg-transparent'
-                  }`}>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selectedAgentId === agent.id ? 'bg-black/30' : 'bg-transparent'
+                    }`}>
                     <agent.icon
                       size={16}
                       className={selectedAgentId === agent.id ? agent.color : 'text-gray-500 group-hover:text-gray-300'}
                     />
                   </div>
                   <div className="text-center w-full">
-                    <h4 className={`font-display font-bold text-[11px] truncate ${
-                      selectedAgentId === agent.id ? agent.color : 'text-gray-400 group-hover:text-white'
-                    }`}>
+                    <h4 className={`font-display font-bold text-[11px] truncate ${selectedAgentId === agent.id ? agent.color : 'text-gray-400 group-hover:text-white'
+                      }`}>
                       {agent.name}
                     </h4>
                   </div>
@@ -669,14 +748,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
         {currentUser && (
           <div className="p-4 border-t border-blue-900/30 bg-black/40">
             <div className="flex items-center gap-3">
-               <div className="w-8 h-8 rounded-full bg-blue-900/50 flex items-center justify-center border border-blue-500/30">
-                  <span className="font-display font-bold text-xs">{currentUser.name.substring(0, 2).toUpperCase()}</span>
-               </div>
-               <div className="flex-1 min-w-0">
-                 <p className="text-xs font-bold text-white truncate">{currentUser.name}</p>
-                 <p className="text-[10px] text-blue-400 font-mono truncate">{currentUser.email}</p>
-               </div>
-               <Settings size={14} className="text-gray-500 hover:text-white cursor-pointer" />
+              <div className="w-8 h-8 rounded-full bg-blue-900/50 flex items-center justify-center border border-blue-500/30">
+                <span className="font-display font-bold text-xs">{currentUser.name.substring(0, 2).toUpperCase()}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-white truncate">{currentUser.name}</p>
+                <p className="text-[10px] text-blue-400 font-mono truncate">{currentUser.email}</p>
+              </div>
+              <Settings size={14} className="text-gray-500 hover:text-white cursor-pointer" />
             </div>
           </div>
         )}
@@ -715,17 +794,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
                     <div
                       key={conv.id}
                       onClick={() => { setCurrentId(conv.id); setIsSidebarOpen(false); }}
-                      className={`group relative flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all duration-200 whitespace-nowrap ${
-                        currentId === conv.id
-                          ? 'bg-blue-900/20 border border-blue-500/30 text-white'
-                          : 'text-gray-400 hover:bg-white/5 hover:text-white border border-transparent'
-                      }`}
+                      className={`group relative flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all duration-200 whitespace-nowrap ${currentId === conv.id
+                        ? 'bg-blue-900/20 border border-blue-500/30 text-white'
+                        : 'text-gray-400 hover:bg-white/5 hover:text-white border border-transparent'
+                        }`}
                     >
                       <MessageSquare size={14} className={currentId === conv.id ? currentAgent.color : 'text-gray-600'} />
                       <div className="flex flex-col min-w-0">
                         <p className="text-sm font-medium truncate max-w-[180px]">{conv.title}</p>
                         <p className="text-[9px] opacity-50 font-mono">
-                          {new Date(conv.lastModified).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {conv.agentId ? AGENTS[conv.agentId as keyof typeof AGENTS].name : 'FIDI'}
+                          {new Date(conv.lastModified).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {conv.agentId ? AGENTS[conv.agentId as keyof typeof AGENTS].name : 'FIDI'}
                         </p>
                       </div>
                       <button
@@ -764,7 +842,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
 
               {msg.role === 'assistant' && (
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center border flex-shrink-0 mt-1 ${currentAgent.borderColor} bg-black text-white`}>
-                   <currentAgent.icon size={16} />
+                  <currentAgent.icon size={16} />
                 </div>
               )}
 
@@ -774,13 +852,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
                 {msg.media && (
                   <div className="mb-2 rounded-lg overflow-hidden border border-blue-500/30 bg-black/50">
                     {msg.media.type === 'image' ? (
-                       <img src={msg.media.url} alt="Generated Content" className="w-full h-auto max-h-[400px] object-contain" />
+                      <img src={msg.media.url} alt="Generated Content" className="w-full h-auto max-h-[400px] object-contain" />
                     ) : (
-                       <video src={msg.media.url} controls className="w-full h-auto max-h-[400px]" />
+                      <video src={msg.media.url} controls className="w-full h-auto max-h-[400px]" />
                     )}
                     <div className="px-3 py-1 bg-blue-900/20 text-[10px] font-mono text-blue-300 flex justify-between">
-                       <span>{msg.media.type.toUpperCase()} GENERATED BY {currentAgent.name}</span>
-                       <span>HD</span>
+                      <span>{msg.media.type.toUpperCase()} GENERATED BY {currentAgent.name}</span>
+                      <span>HD</span>
                     </div>
                   </div>
                 )}
@@ -788,22 +866,21 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
                 {/* User Attachments Display */}
                 {msg.attachments && msg.attachments.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-2 justify-end">
-                     {msg.attachments.map((att, i) => (
-                        <div key={i} className="flex items-center gap-2 bg-blue-900/30 border border-blue-500/20 rounded px-3 py-2 text-xs text-blue-200">
-                           {att.type.startsWith('image') ? <ImageIcon size={14} /> : <FileText size={14} />}
-                           <span className="truncate max-w-[150px]">{att.name}</span>
-                        </div>
-                     ))}
+                    {msg.attachments.map((att, i) => (
+                      <div key={i} className="flex items-center gap-2 bg-blue-900/30 border border-blue-500/20 rounded px-3 py-2 text-xs text-blue-200">
+                        {att.type.startsWith('image') ? <ImageIcon size={14} /> : <FileText size={14} />}
+                        <span className="truncate max-w-[150px]">{att.name}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
 
                 {/* Text Content */}
                 {msg.content && (
-                  <div className={`p-4 rounded-2xl ${
-                    msg.role === 'user'
-                      ? 'bg-blue-600 text-white rounded-tr-sm'
-                      : 'bg-white/5 border border-white/10 text-gray-100 rounded-tl-sm backdrop-blur-sm'
-                  }`}>
+                  <div className={`p-4 rounded-2xl ${msg.role === 'user'
+                    ? 'bg-blue-600 text-white rounded-tr-sm'
+                    : 'bg-white/5 border border-white/10 text-gray-100 rounded-tl-sm backdrop-blur-sm'
+                    }`}>
                     <div className="prose prose-invert prose-sm max-w-none leading-relaxed font-sans markdown-content">
                       <MarkdownRenderer content={msg.content} />
                     </div>
@@ -811,13 +888,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
                 )}
 
                 <p className={`text-[10px] font-mono opacity-40 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-                  {new Date(msg.timestamp || Date.now()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  {new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
 
               {msg.role === 'user' && (
                 <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0 mt-1 border border-white/10">
-                   <span className="text-xs font-bold">{currentUser?.name.charAt(0)}</span>
+                  <span className="text-xs font-bold">{currentUser?.name.charAt(0)}</span>
                 </div>
               )}
             </div>
@@ -827,13 +904,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
           <AnimatePresence>
             {isTyping && (
               <motion.div
-                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                 exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-                 className="flex gap-4 justify-start"
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                className="flex gap-4 justify-start"
               >
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center border flex-shrink-0 mt-1 ${currentAgent.borderColor} bg-black text-white`}>
-                   <currentAgent.icon size={16} />
+                  <currentAgent.icon size={16} />
                 </div>
                 <div className="bg-white/5 border border-white/10 p-4 rounded-2xl rounded-tl-sm flex items-center gap-3">
                   {processingStatus ? (
@@ -874,22 +951,22 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
           {/* Attachment Preview Area */}
           {attachments.length > 0 && (
             <div className="flex gap-3 mb-3 overflow-x-auto pb-2">
-               {attachments.map((att, i) => (
-                  <div key={i} className="relative group bg-blue-900/20 border border-blue-500/30 rounded-lg p-2 w-24 h-24 flex flex-col items-center justify-center gap-1">
-                     <button
-                       onClick={() => removeAttachment(i)}
-                       className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                     >
-                        <X size={10} />
-                     </button>
-                     {att.type.startsWith('image') ? (
-                       <img src={`data:${att.type};base64,${att.data}`} alt="preview" className="w-full h-full object-cover rounded" />
-                     ) : (
-                       <FileText className="text-blue-400" size={24} />
-                     )}
-                     <span className="text-[9px] text-blue-200 truncate w-full text-center">{att.name}</span>
-                  </div>
-               ))}
+              {attachments.map((att, i) => (
+                <div key={i} className="relative group bg-blue-900/20 border border-blue-500/30 rounded-lg p-2 w-24 h-24 flex flex-col items-center justify-center gap-1">
+                  <button
+                    onClick={() => removeAttachment(i)}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X size={10} />
+                  </button>
+                  {att.type.startsWith('image') ? (
+                    <img src={`data:${att.type};base64,${att.data}`} alt="preview" className="w-full h-full object-cover rounded" />
+                  ) : (
+                    <FileText className="text-blue-400" size={24} />
+                  )}
+                  <span className="text-[9px] text-blue-200 truncate w-full text-center">{att.name}</span>
+                </div>
+              ))}
             </div>
           )}
 
@@ -905,11 +982,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className={`p-3 rounded-lg transition-colors border ${
-                isUploading
-                  ? 'text-gray-500 cursor-not-allowed border-transparent'
-                  : 'text-blue-500 hover:text-white hover:bg-blue-900/30 border-transparent hover:border-blue-500/30'
-              }`}
+              className={`p-3 rounded-lg transition-colors border ${isUploading
+                ? 'text-gray-500 cursor-not-allowed border-transparent'
+                : 'text-blue-500 hover:text-white hover:bg-blue-900/30 border-transparent hover:border-blue-500/30'
+                }`}
               title={isUploading ? "Processing file..." : "Attach file"}
             >
               {isUploading ? <Loader2 className="animate-spin" size={20} /> : <Paperclip size={20} />}
@@ -926,30 +1002,29 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
                 className="w-full bg-white/5 border border-white/10 hover:border-blue-500/30 focus:border-blue-500 rounded-xl py-4 pl-4 pr-12 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500/20 transition-all font-sans"
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                 {isTyping ? (
-                   <Loader2 className="animate-spin text-blue-500" size={20} />
-                 ) : (
-                   <Sparkles size={16} className={`opacity-20 ${currentAgent.color}`} />
-                 )}
+                {isTyping ? (
+                  <Loader2 className="animate-spin text-blue-500" size={20} />
+                ) : (
+                  <Sparkles size={16} className={`opacity-20 ${currentAgent.color}`} />
+                )}
               </div>
             </div>
 
             <button
               onClick={handleSend}
               disabled={(!input.trim() && attachments.length === 0) || isTyping}
-              className={`p-4 rounded-xl font-bold transition-all duration-300 shadow-lg flex items-center justify-center ${
-                input.trim() || attachments.length > 0
-                  ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20 hover:scale-105'
-                  : 'bg-white/5 text-gray-500 cursor-not-allowed'
-              }`}
+              className={`p-4 rounded-xl font-bold transition-all duration-300 shadow-lg flex items-center justify-center ${input.trim() || attachments.length > 0
+                ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20 hover:scale-105'
+                : 'bg-white/5 text-gray-500 cursor-not-allowed'
+                }`}
             >
               <Send size={20} />
             </button>
           </div>
           <div className="text-center mt-3">
-             <p className="font-mono text-[10px] text-gray-600 uppercase">
-               FIDI.ai may generate inaccurate information. Verify important data.
-             </p>
+            <p className="font-mono text-[10px] text-gray-600 uppercase">
+              FIDI.ai may generate inaccurate information. Verify important data.
+            </p>
           </div>
         </div>
       </div>

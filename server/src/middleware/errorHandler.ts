@@ -1,15 +1,20 @@
 import { Request, Response, NextFunction } from 'express';
+import { ErrorType } from '../lib/errorClassifier.js';
 
 export class APIError extends Error {
   constructor(
     message: string,
     public statusCode: number = 500,
-    public code: string = 'INTERNAL_ERROR'
+    public code: string = 'INTERNAL_ERROR',
+    public errorType?: ErrorType,
+    public retryable: boolean = false,
+    public metadata?: Record<string, any>
   ) {
     super(message);
     this.name = 'APIError';
   }
 }
+
 
 export function errorHandler(
   err: Error,
@@ -22,10 +27,14 @@ export function errorHandler(
   if (err instanceof APIError) {
     res.status(err.statusCode).json({
       error: err.message,
-      code: err.code
+      code: err.code,
+      errorType: err.errorType,
+      retryable: err.retryable,
+      ...err.metadata
     });
     return;
   }
+
 
   // Handle specific errors
   if (err.message?.includes('timeout')) {

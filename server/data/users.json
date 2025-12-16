@@ -1,0 +1,18 @@
+{
+  "users": [
+    {
+      "id": "user-db09fb59-ee42-4455-8fe2-029a03a9d840",
+      "email": "ygortrend@hotmail.com",
+      "name": "Ygor Sobrinho",
+      "password": "$2a$10$0tlovvUgW2NWfkTcYTXnxe.FfMGc3zLZYNdHS5NMWtND5yqTjJomu",
+      "createdAt": 1765821807958,
+      "updatedAt": 1765821807958,
+      "tokenBalance": 50000,
+      "tokenUsageTotal": 0,
+      "tokenUsageThisMonth": 0,
+      "lastTokenReset": 1765821807959,
+      "isAdmin": false
+    }
+  ],
+  "version": 1
+}
