@@ -7,6 +7,7 @@ export interface AgentConfig {
   model: string;
   icon: LucideIcon;
   color: string;
+  bgColor: string;
   borderColor: string;
   bgGradient: string;
   systemPrompt: string;
@@ -20,6 +21,7 @@ export const AGENTS: Record<string, AgentConfig> = {
     model: 'x-ai/grok-4.1-fast:free',
     icon: Terminal,
     color: 'text-blue-400',
+    bgColor: 'bg-blue-400',
     borderColor: 'border-blue-500',
     bgGradient: 'from-blue-900/20',
     systemPrompt: `You're a senior software architect. Respond naturally and conversationally like a real developer would.
@@ -43,6 +45,7 @@ Don't force structure where it's not needed. Talk like a helpful colleague, not 
     model: 'x-ai/grok-4.1-fast:free',
     icon: PenTool,
     color: 'text-purple-400',
+    bgColor: 'bg-purple-400',
     borderColor: 'border-purple-500',
     bgGradient: 'from-purple-900/20',
     systemPrompt: `You're an expert copywriter and creative writer. Respond naturally like a real creative professional would.
@@ -71,6 +74,7 @@ Use Markdown (**bold**, *italic*) naturally. No clichés. No overstructuring sim
     model: 'x-ai/grok-4.1-fast:free',
     icon: LayoutGrid,
     color: 'text-emerald-400',
+    bgColor: 'bg-emerald-400',
     borderColor: 'border-emerald-500',
     bgGradient: 'from-emerald-900/20',
     systemPrompt: `You're an organization and productivity specialist. Respond naturally like a real professional organizer would.
@@ -95,6 +99,7 @@ Be conversational. Save the structure for when it actually adds value, not for g
     model: 'x-ai/grok-4.1-fast:free',
     icon: Palette,
     color: 'text-pink-400',
+    bgColor: 'bg-pink-400',
     borderColor: 'border-pink-500',
     bgGradient: 'from-pink-900/20',
     systemPrompt: `You're a visual design and cinematography specialist. Respond naturally like a real creative director would.

@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Lock, Zap } from 'lucide-react';
+import React from 'react';
+import { Lock } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { FREE_MODELS, PAID_MODELS, getModelInfo, ModelInfo } from '../config/models';
 
 interface ModelSelectorProps {
@@ -17,187 +18,103 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   lockedReason,
   defaultModel
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Get current model info (selected or default)
-  const currentModelId = selectedModel || defaultModel;
-  const currentModelInfo = currentModelId ? getModelInfo(currentModelId) : null;
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-
-    return undefined;
-  }, [isOpen]);
-
-  const handleToggle = () => {
-    if (!disabled) {
-      setIsOpen(!isOpen);
-    }
-  };
-
   const handleModelSelect = (modelId: string) => {
     onModelChange(modelId);
-    setIsOpen(false);
-  };
-
-  const handleUseDefault = () => {
-    onModelChange(null);
-    setIsOpen(false);
   };
 
   const renderModelOption = (model: ModelInfo, isSelected: boolean) => (
     <button
       key={model.id}
       onClick={() => handleModelSelect(model.id)}
-      className={`w-full text-left p-3 rounded-lg transition-all ${
+      className={`w-full text-left p-2.5 rounded-lg transition-all duration-200 group ${
         isSelected
-          ? 'bg-blue-500/20 border border-blue-500/50'
-          : 'hover:bg-white/5 border border-transparent'
+          ? 'bg-gradient-to-r from-blue-500/30 to-blue-500/10 border border-blue-500/50 shadow-lg shadow-blue-500/10'
+          : 'hover:bg-white/5 border border-white/10 hover:border-white/20'
       }`}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2.5">
         {/* Icon */}
-        <span className="text-2xl flex-shrink-0">{model.icon}</span>
+        <div className={`p-1.5 rounded-md ${
+          isSelected ? 'bg-blue-500/20' : 'bg-white/5 group-hover:bg-white/10'
+        }`}>
+          <span className="text-lg flex-shrink-0">{model.icon}</span>
+        </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-sans font-semibold text-white text-sm truncate">
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="font-sans font-bold text-white text-xs truncate">
               {model.displayName}
             </span>
             <span
-              className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${model.badgeColor}`}
+              className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${model.badgeColor}`}
             >
               {model.badge}
             </span>
           </div>
-          <p className="font-sans text-xs text-gray-400 leading-tight mb-1">
+          <p className="font-sans text-[10px] text-gray-400 leading-tight mb-1 line-clamp-1">
             {model.description}
           </p>
-          <p className="font-mono text-[10px] text-gray-500">{model.provider}</p>
+          <p className="font-mono text-[9px] text-gray-600">{model.provider}</p>
         </div>
       </div>
     </button>
   );
 
   return (
-    <div ref={dropdownRef} className="relative">
-      {/* Selector Button */}
-      <button
-        onClick={handleToggle}
-        disabled={disabled}
-        className={`w-full px-4 py-3 rounded-lg border transition-all ${
-          disabled
-            ? 'bg-gray-800/50 border-gray-700/50 cursor-not-allowed opacity-60'
-            : 'bg-blue-900/20 border-blue-500/30 hover:border-blue-500/50 hover:bg-blue-900/30'
-        }`}
-        title={disabled ? lockedReason : 'Select AI model'}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            {disabled ? (
-              <Lock size={16} className="text-gray-500 flex-shrink-0" />
-            ) : (
-              <Zap size={16} className="text-blue-400 flex-shrink-0" />
-            )}
-
-            <div className="flex-1 min-w-0 text-left">
-              {currentModelInfo ? (
-                <>
-                  <div className="flex items-center gap-2">
-                    <span className="font-sans text-sm text-white font-semibold truncate">
-                      {currentModelInfo.displayName}
-                    </span>
-                    {!selectedModel && (
-                      <span className="text-[10px] font-mono text-gray-500">(Agent Default)</span>
-                    )}
-                  </div>
-                  <p className="font-mono text-[10px] text-gray-400 truncate">
-                    {currentModelInfo.costMultiplier === 0
-                      ? 'Free - Unlimited usage'
-                      : `${currentModelInfo.costMultiplier}x cost`}
-                  </p>
-                </>
-              ) : (
-                <span className="font-sans text-sm text-gray-400">Select a model</span>
-              )}
-            </div>
+    <div className="relative flex flex-col h-full">
+      {/* Scrollable Cards Container */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-blue-900/50 scrollbar-track-transparent">
+        {/* FREE MODELS Section */}
+        <div className="mb-4">
+          <h3 className="sticky top-0 z-10 bg-black/95 backdrop-blur-xl px-2 py-2 mb-2 font-mono text-[10px] uppercase tracking-widest flex items-center gap-2 border-b border-blue-500/20">
+            <span className="flex-1 text-green-400">Free Models</span>
+            <span className="text-[8px] text-gray-500 normal-case bg-green-500/10 px-1.5 py-0.5 rounded">∞</span>
+          </h3>
+          <div className="space-y-2 px-1">
+            {FREE_MODELS.map(model => (
+              <motion.div
+                key={model.id}
+                layout
+                whileHover={{ scale: 1.02, y: -2 }}
+                transition={{ duration: 0.2 }}
+              >
+                {renderModelOption(model, selectedModel === model.id)}
+              </motion.div>
+            ))}
           </div>
-
-          {!disabled && (
-            <ChevronDown
-              size={16}
-              className={`text-gray-400 flex-shrink-0 transition-transform ${
-                isOpen ? 'rotate-180' : ''
-              }`}
-            />
-          )}
         </div>
-      </button>
 
-      {/* Dropdown Menu */}
-      {isOpen && !disabled && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900/95 backdrop-blur-xl border border-blue-500/30 rounded-lg shadow-2xl max-h-96 overflow-y-auto z-50">
-          <div className="p-3">
-            {/* Use Agent Default Option */}
-            {defaultModel && (
-              <>
-                <div className="mb-3">
-                  <button
-                    onClick={handleUseDefault}
-                    className={`w-full text-left p-3 rounded-lg transition-all ${
-                      !selectedModel
-                        ? 'bg-blue-500/20 border border-blue-500/50'
-                        : 'hover:bg-white/5 border border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Zap size={14} className="text-blue-400" />
-                      <span className="font-sans text-sm text-white font-semibold">
-                        Use Agent Default
-                      </span>
-                      <span className="text-[10px] font-mono text-gray-500">
-                        ({getModelInfo(defaultModel)?.displayName || 'Default'})
-                      </span>
-                    </div>
-                  </button>
-                </div>
-                <div className="border-t border-white/10 my-3"></div>
-              </>
-            )}
+        {/* PAID MODELS Section */}
+        <div>
+          <h3 className="sticky top-0 z-10 bg-black/95 backdrop-blur-xl px-2 py-2 mb-2 font-mono text-[10px] uppercase tracking-widest flex items-center gap-2 border-b border-blue-500/20">
+            <span className="flex-1 text-yellow-400">Premium</span>
+            <span className="text-[8px] text-gray-500 normal-case bg-yellow-500/10 px-1.5 py-0.5 rounded">1.5x</span>
+          </h3>
+          <div className="space-y-2 px-1">
+            {PAID_MODELS.map(model => (
+              <motion.div
+                key={model.id}
+                layout
+                whileHover={{ scale: 1.02, y: -2 }}
+                transition={{ duration: 0.2 }}
+              >
+                {renderModelOption(model, selectedModel === model.id)}
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </div>
 
-            {/* FREE MODELS Section */}
-            <div className="mb-4">
-              <h3 className="font-mono text-xs text-green-400 uppercase tracking-widest mb-2 px-2 flex items-center gap-2">
-                <span className="flex-1">Free Models</span>
-                <span className="text-[10px] text-gray-500 normal-case">Unlimited</span>
-              </h3>
-              <div className="space-y-2">
-                {FREE_MODELS.map(model => renderModelOption(model, selectedModel === model.id))}
-              </div>
-            </div>
-
-            {/* PAID MODELS Section */}
-            <div>
-              <h3 className="font-mono text-xs text-yellow-400 uppercase tracking-widest mb-2 px-2 flex items-center gap-2">
-                <span className="flex-1">Premium Models</span>
-                <span className="text-[10px] text-gray-500 normal-case">1.5x cost</span>
-              </h3>
-              <div className="space-y-2">
-                {PAID_MODELS.map(model => renderModelOption(model, selectedModel === model.id))}
-              </div>
-            </div>
+      {/* Disabled State Overlay */}
+      {disabled && (
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm rounded-lg flex flex-col items-center justify-center gap-3 z-20">
+          <div className="p-4 bg-gray-800/50 rounded-full">
+            <Lock size={24} className="text-gray-400" />
+          </div>
+          <div className="text-center px-4">
+            <p className="font-sans text-sm text-white font-semibold mb-1">Model Locked</p>
+            <p className="font-mono text-xs text-gray-400">{lockedReason}</p>
           </div>
         </div>
       )}

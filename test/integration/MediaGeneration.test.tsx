@@ -106,19 +106,15 @@ describe('Media Generation Integration Tests', () => {
     it('should mock generateImage with proper response', async () => {
       const result = await apiClient.generateImage('test prompt');
 
-      expect(result).toEqual({
-        id: 'mock-image-123',
-        url: 'https://example.com/generated-image.png',
-      });
+      // API returns URL string directly
+      expect(result).toBe('https://example.com/generated-image.png');
     });
 
     it('should mock generateVideo with proper response', async () => {
       const result = await apiClient.generateVideo('test prompt');
 
-      expect(result).toEqual({
-        id: 'mock-video-456',
-        url: 'https://example.com/generated-video.mp4',
-      });
+      // API returns URL string directly
+      expect(result).toBe('https://example.com/generated-video.mp4');
     });
   });
 
@@ -160,13 +156,9 @@ describe('Media Generation Integration Tests', () => {
 
   describe('Agent-Specific Behavior', () => {
     it('should show different placeholder for non-NENECA agents', async () => {
-      const user = userEvent.setup();
       render(<ChatInterface currentUser={mockUser} onBack={mockOnBack} />);
 
-      // FIDI should show standard placeholder
-      const fidiButton = screen.getByTitle('FIDI');
-      await user.click(fidiButton);
-
+      // FIDI is the default agent, should show standard placeholder
       await waitFor(() => {
         expect(screen.getByPlaceholderText(/digite seu comando/i)).toBeInTheDocument();
       });

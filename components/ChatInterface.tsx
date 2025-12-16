@@ -595,7 +595,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
         <div className="p-4 border-b border-blue-900/30 flex justify-between items-center">
           <button onClick={onBack} className="text-blue-400 hover:text-white transition-colors flex items-center gap-2">
             <ChevronLeft size={16} />
-            <span className="font-mono text-xs uppercase tracking-widest">Back</span>
+            <span className="font-mono text-xs uppercase tracking-widest">Retornar</span>
           </button>
           <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-gray-400">
             <X size={20} />
@@ -609,11 +609,54 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
           </div>
         )}
 
-        {/* Model Selector */}
-        <div className="p-4 border-b border-blue-900/30">
-          <h3 className="font-mono text-xs text-blue-500 uppercase tracking-widest mb-3 px-2">
-            AI Model
+        {/* Agent Selector - Compact Design */}
+        <div className="p-3 border-b border-blue-900/30">
+          <h3 className="font-mono text-[10px] text-blue-500 uppercase tracking-widest mb-2 px-1">
+            Agente
           </h3>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.values(AGENTS).map((agent) => (
+              <button
+                key={agent.id}
+                onClick={() => handleAgentSwitch(agent.id as keyof typeof AGENTS)}
+                title={`${agent.name} - ${agent.role}`}
+                aria-label={`Select ${agent.name} agent - ${agent.role}`}
+                className={`relative group p-2 rounded-lg border transition-all duration-300 ${
+                  selectedAgentId === agent.id
+                    ? `${agent.borderColor} bg-gradient-to-br ${agent.bgGradient} to-black/50 shadow-lg`
+                    : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
+                }`}
+              >
+                <div className="flex flex-col items-center gap-1.5">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                    selectedAgentId === agent.id ? 'bg-black/30' : 'bg-transparent'
+                  }`}>
+                    <agent.icon
+                      size={16}
+                      className={selectedAgentId === agent.id ? agent.color : 'text-gray-500 group-hover:text-gray-300'}
+                    />
+                  </div>
+                  <div className="text-center w-full">
+                    <h4 className={`font-display font-bold text-[11px] truncate ${
+                      selectedAgentId === agent.id ? agent.color : 'text-gray-400 group-hover:text-white'
+                    }`}>
+                      {agent.name}
+                    </h4>
+                  </div>
+                  {selectedAgentId === agent.id && (
+                    <span className="absolute top-1 right-1 flex h-1.5 w-1.5">
+                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${agent.bgColor} opacity-75`}></span>
+                      <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${agent.bgColor}`}></span>
+                    </span>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Model Selector Section - Fills Available Space */}
+        <div className="flex-1 flex flex-col overflow-hidden px-3 pb-3">
           <ModelSelector
             selectedModel={selectedModel}
             onModelChange={setSelectedModel}
@@ -621,97 +664,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
             lockedReason={modelLockReason}
             defaultModel={currentAgent.model}
           />
-
-          {/* Model info display */}
-          {selectedModel && (
-            <div className="mt-3 px-2">
-              <div className="flex items-start gap-2 p-2 bg-blue-900/10 border border-blue-500/20 rounded-lg">
-                <Sparkles size={14} className="text-blue-400 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="font-sans text-xs text-blue-300 font-semibold">
-                    {getModelInfo(selectedModel)?.displayName}
-                  </p>
-                  <p className="font-sans text-[10px] text-gray-400 leading-tight mt-0.5">
-                    {getModelInfo(selectedModel)?.costMultiplier === 0
-                      ? 'Unlimited usage - no token cost'
-                      : `${getModelInfo(selectedModel)?.costMultiplier}x token cost multiplier`
-                    }
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Agent Selector */}
-        <div className="p-4 border-b border-blue-900/30">
-          <h3 className="font-mono text-xs text-blue-500 uppercase tracking-widest mb-3 px-2">Active Agent</h3>
-          <div className="grid grid-cols-4 gap-2">
-            {Object.values(AGENTS).map((agent) => (
-              <button
-                key={agent.id}
-                onClick={() => handleAgentSwitch(agent.id as keyof typeof AGENTS)}
-                className={`relative group p-2 rounded-lg border transition-all duration-300 ${
-                  selectedAgentId === agent.id
-                    ? `${agent.borderColor} bg-blue-900/20 shadow-[0_0_15px_rgba(0,0,0,0.5)]`
-                    : 'border-transparent hover:bg-white/5'
-                }`}
-                title={agent.name}
-              >
-                <div className={`flex justify-center ${selectedAgentId === agent.id ? agent.color : 'text-gray-500 group-hover:text-gray-300'}`}>
-                  <agent.icon size={20} />
-                </div>
-                {selectedAgentId === agent.id && (
-                  <span className="absolute -bottom-1 -right-1 flex h-2 w-2">
-                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${agent.color.replace('text-', 'bg-')} opacity-75`}></span>
-                    <span className={`relative inline-flex rounded-full h-2 w-2 ${agent.color.replace('text-', 'bg-')}`}></span>
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-          <div className="mt-3 px-2">
-            <h4 className={`font-display font-bold text-lg ${currentAgent.color}`}>{currentAgent.name}</h4>
-            <p className="font-mono text-[10px] text-gray-400 uppercase tracking-wide">{currentAgent.role}</p>
-          </div>
-        </div>
-
-        <div className="p-4">
-          <button
-            onClick={handleNewChat}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-900/20 hover:bg-blue-900/30 border border-blue-500/30 text-blue-100 rounded-lg transition-all duration-200 group"
-          >
-            <Plus size={16} className="group-hover:rotate-90 transition-transform duration-300" />
-            <span className="font-sans font-medium text-sm">New Session</span>
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1 scrollbar-thin scrollbar-thumb-blue-900/50">
-          {conversations.map(conv => (
-            <div
-              key={conv.id}
-              onClick={() => { setCurrentId(conv.id); setIsSidebarOpen(false); }}
-              className={`group flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all duration-200 ${
-                currentId === conv.id
-                  ? 'bg-blue-900/20 border border-blue-500/30 text-white'
-                  : 'text-gray-400 hover:bg-white/5 hover:text-white border border-transparent'
-              }`}
-            >
-              <MessageSquare size={16} className={currentId === conv.id ? currentAgent.color : 'text-gray-600'} />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{conv.title}</p>
-                <p className="text-[10px] opacity-50 font-mono mt-0.5">
-                   {new Date(conv.lastModified).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {conv.agentId ? AGENTS[conv.agentId as keyof typeof AGENTS].name : 'FIDI'}
-                </p>
-              </div>
-              <button
-                onClick={(e) => handleDeleteConversation(e, conv.id)}
-                className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 transition-opacity"
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))}
         </div>
 
         {currentUser && (
@@ -732,17 +684,61 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col h-full relative z-10">
-        {/* Header */}
-        <header className="h-16 border-b border-blue-900/30 bg-black/40 backdrop-blur-sm flex items-center justify-between px-4 md:px-6">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setIsSidebarOpen(true)} className="md:hidden text-blue-400">
+        {/* Header with Session History */}
+        <header className="border-b border-blue-900/30 bg-black/40 backdrop-blur-sm">
+          {/* Session History + New Session Button */}
+          <div className="h-14 px-4 md:px-6 flex items-center gap-3">
+            {/* Mobile menu button */}
+            <button onClick={() => setIsSidebarOpen(true)} className="md:hidden text-blue-400 flex-shrink-0">
               <Menu size={24} />
             </button>
-            <div className="flex items-center gap-3">
-               <div className={`w-2 h-2 rounded-full ${isKeySet ? 'bg-green-500 shadow-[0_0_10px_#22c55e]' : 'bg-red-500 animate-pulse'}`}></div>
-               <span className="font-mono text-xs text-blue-400 tracking-widest uppercase">
-                 {currentAgent.name} v.2.0 // {isKeySet ? 'CONNECTED' : 'AWAITING KEY'}
-               </span>
+            {/* New Session Button */}
+            <button
+              onClick={handleNewChat}
+              className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-blue-900/20 hover:bg-blue-900/30 border border-blue-500/30 text-blue-100 rounded-lg transition-all duration-200 group"
+              title="Start a new conversation"
+            >
+              <Plus size={16} className="group-hover:rotate-90 transition-transform duration-300" />
+              <span className="font-sans font-medium text-sm hidden sm:inline">Nova Sessão</span>
+            </button>
+
+            {/* Horizontal Session History */}
+            <div className="flex-1 overflow-x-auto scrollbar-thin scrollbar-thumb-blue-900/50 scrollbar-track-transparent">
+              <div className="flex gap-2 min-w-max">
+                {conversations.length === 0 ? (
+                  <div className="flex items-center gap-2 px-4 py-2 text-gray-500 text-sm font-mono">
+                    <MessageSquare size={14} className="opacity-50" />
+                    <span>No conversations yet</span>
+                  </div>
+                ) : (
+                  conversations.map(conv => (
+                    <div
+                      key={conv.id}
+                      onClick={() => { setCurrentId(conv.id); setIsSidebarOpen(false); }}
+                      className={`group relative flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all duration-200 whitespace-nowrap ${
+                        currentId === conv.id
+                          ? 'bg-blue-900/20 border border-blue-500/30 text-white'
+                          : 'text-gray-400 hover:bg-white/5 hover:text-white border border-transparent'
+                      }`}
+                    >
+                      <MessageSquare size={14} className={currentId === conv.id ? currentAgent.color : 'text-gray-600'} />
+                      <div className="flex flex-col min-w-0">
+                        <p className="text-sm font-medium truncate max-w-[180px]">{conv.title}</p>
+                        <p className="text-[9px] opacity-50 font-mono">
+                          {new Date(conv.lastModified).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {conv.agentId ? AGENTS[conv.agentId as keyof typeof AGENTS].name : 'FIDI'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={(e) => handleDeleteConversation(e, conv.id)}
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 transition-opacity ml-1"
+                        title="Delete conversation"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </header>
@@ -850,17 +846,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
                       <motion.div
                         animate={{ y: [0, -5, 0] }}
                         transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut", delay: 0 }}
-                        className={`w-2 h-2 ${currentAgent.color.replace('text-', 'bg-')} rounded-full`}
+                        className={`w-2 h-2 ${currentAgent.bgColor} rounded-full`}
                       />
                       <motion.div
                         animate={{ y: [0, -5, 0] }}
                         transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
-                        className={`w-2 h-2 ${currentAgent.color.replace('text-', 'bg-')} rounded-full`}
+                        className={`w-2 h-2 ${currentAgent.bgColor} rounded-full`}
                       />
                       <motion.div
                         animate={{ y: [0, -5, 0] }}
                         transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
-                        className={`w-2 h-2 ${currentAgent.color.replace('text-', 'bg-')} rounded-full`}
+                        className={`w-2 h-2 ${currentAgent.bgColor} rounded-full`}
                       />
                     </div>
                   )}
@@ -926,7 +922,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder={currentAgent.id === '04' ? "Describe the image or video you want to generate..." : "Type your command..."}
+                placeholder={currentAgent.id === '04' ? "Descreva a imagem ou vídeo que deseja gerar..." : "Digite seu comando..."}
                 className="w-full bg-white/5 border border-white/10 hover:border-blue-500/30 focus:border-blue-500 rounded-xl py-4 pl-4 pr-12 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500/20 transition-all font-sans"
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
