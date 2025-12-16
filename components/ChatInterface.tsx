@@ -701,7 +701,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
               <button
                 key={agent.id}
                 onClick={() => handleAgentSwitch(agent.id as keyof typeof AGENTS)}
-                title={`${agent.name} - ${agent.role}`}
+                title={agent.name}
                 aria-label={`Select ${agent.name} agent - ${agent.role}`}
                 className={`relative group p-2 rounded-lg border transition-all duration-300 ${selectedAgentId === agent.id
                   ? `${agent.borderColor} bg-gradient-to-br ${agent.bgGradient} to-black/50 shadow-lg`
@@ -741,7 +741,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
             onModelChange={setSelectedModel}
             disabled={isModelLocked}
             lockedReason={modelLockReason}
-            defaultModel={currentAgent.model}
           />
         </div>
 

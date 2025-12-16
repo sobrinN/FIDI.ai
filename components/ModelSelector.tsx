@@ -1,22 +1,20 @@
 import React from 'react';
 import { Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { FREE_MODELS, PAID_MODELS, getModelInfo, ModelInfo } from '../config/models';
+import { FREE_MODELS, PAID_MODELS, ModelInfo } from '../config/models';
 
 interface ModelSelectorProps {
   selectedModel: string | null;
   onModelChange: (modelId: string | null) => void;
   disabled?: boolean;
   lockedReason?: string;
-  defaultModel?: string;
 }
 
 export const ModelSelector: React.FC<ModelSelectorProps> = ({
   selectedModel,
   onModelChange,
   disabled = false,
-  lockedReason,
-  defaultModel
+  lockedReason
 }) => {
   const handleModelSelect = (modelId: string) => {
     onModelChange(modelId);
