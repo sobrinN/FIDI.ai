@@ -29,6 +29,7 @@ const VIDEO_MODELS = {
 
 // Valid aspect ratios and settings
 const VALID_ASPECT_RATIOS = ['16:9', '4:3', '4:5', '1:1', '9:16'];
+const VALID_RESOLUTIONS = ['720p', '1080p', '4k'];
 const VALID_DURATIONS = ['5s', '10s'];
 
 interface ReplicatePrediction {
@@ -239,7 +240,7 @@ mediaRouter.post('/image', checkTokenQuota(TOKEN_COSTS.IMAGE_GENERATION), async 
 
 mediaRouter.post('/video', checkTokenQuota(TOKEN_COSTS.VIDEO_GENERATION), async (req: AuthRequest, res, next): Promise<void> => {
   try {
-    const { prompt, model, aspectRatio, duration } = req.body;
+    const { prompt, model, aspectRatio, resolution, duration } = req.body;
 
     if (!prompt || typeof prompt !== 'string') {
       throw new APIError('Invalid or missing prompt', 400, 'INVALID_PROMPT');
@@ -264,16 +265,29 @@ mediaRouter.post('/video', checkTokenQuota(TOKEN_COSTS.VIDEO_GENERATION), async 
       ? aspectRatio
       : '16:9';
 
+    // Validate resolution
+    const selectedResolution = resolution && VALID_RESOLUTIONS.includes(resolution)
+      ? resolution
+      : '1080p';
+
     // Validate duration
     const selectedDuration = duration && VALID_DURATIONS.includes(duration)
       ? duration
       : '5s';
 
-    const enhancedPrompt = `${prompt}, cinematic, smooth motion, high quality, professional`;
+    // Build quality suffix based on resolution
+    const qualitySuffix = selectedResolution === '4k'
+      ? '4K ultra high resolution'
+      : selectedResolution === '1080p'
+        ? 'high quality, detailed'
+        : 'quality';
+
+    const enhancedPrompt = `${prompt}, ${qualitySuffix}, cinematic, smooth motion, professional`;
 
     console.log('[Media] Video generation request', {
       model: selectedModel,
       aspectRatio: selectedAspectRatio,
+      resolution: selectedResolution,
       duration: selectedDuration
     });
 

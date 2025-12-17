@@ -5,13 +5,14 @@
 import React, { useState, useCallback, memo } from 'react';
 import { NodeProps, Handle, Position } from '@xyflow/react';
 import { Video, Loader2, Download, Settings, Sparkles } from 'lucide-react';
-import { VIDEO_MODELS, ASPECT_RATIOS, DURATIONS } from '../../../config/mediaModels';
+import { VIDEO_MODELS, ASPECT_RATIOS, DURATIONS, RESOLUTIONS, getVideoModelById } from '../../../config/mediaModels';
 import { generateVideo } from '../../../lib/apiClient';
 
 export interface VideoNodeData {
     prompt: string;
     model: string;
     aspectRatio: string;
+    resolution: string;
     duration: string;
     outputUrl: string | null;
     isGenerating: boolean;
@@ -23,15 +24,19 @@ const VideoNodeComponent: React.FC<NodeProps> = ({ data }) => {
     const [prompt, setPrompt] = useState(nodeData.prompt || '');
     const [model, setModel] = useState(nodeData.model || VIDEO_MODELS[0].id);
     const [aspectRatio, setAspectRatio] = useState(nodeData.aspectRatio || '16:9');
+    const [resolution, setResolution] = useState(nodeData.resolution || '1080p');
     const [duration, setDuration] = useState(nodeData.duration || '5s');
     const [isGenerating, setIsGenerating] = useState(false);
     const [outputUrl, setOutputUrl] = useState<string | null>(nodeData.outputUrl || null);
     const [error, setError] = useState<string | null>(null);
     const [showSettings, setShowSettings] = useState(false);
 
-    const currentModel = VIDEO_MODELS.find(m => m.id === model) || VIDEO_MODELS[0];
+    const currentModel = getVideoModelById(model) || VIDEO_MODELS[0];
     const supportedDurations = DURATIONS.filter(d =>
         currentModel.supportsDurations.includes(d.value as '5s' | '10s')
+    );
+    const supportedResolutions = RESOLUTIONS.filter(r =>
+        currentModel.supportsResolutions.includes(r.value as '720p' | '1080p')
     );
 
     const handleGenerate = useCallback(async () => {
@@ -45,6 +50,7 @@ const VideoNodeComponent: React.FC<NodeProps> = ({ data }) => {
                 prompt,
                 model,
                 aspectRatio,
+                resolution,
                 duration
             });
             setOutputUrl(url);
@@ -53,7 +59,7 @@ const VideoNodeComponent: React.FC<NodeProps> = ({ data }) => {
         } finally {
             setIsGenerating(false);
         }
-    }, [prompt, model, aspectRatio, duration, isGenerating]);
+    }, [prompt, model, aspectRatio, resolution, duration, isGenerating]);
 
     return (
         <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl min-w-[320px] overflow-hidden">
@@ -133,6 +139,26 @@ const VideoNodeComponent: React.FC<NodeProps> = ({ data }) => {
                                         }`}
                                 >
                                     {d.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Resolution */}
+                    <div>
+                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Resolution</label>
+                        <div className="flex gap-1 mt-1">
+                            {supportedResolutions.map(r => (
+                                <button
+                                    key={r.value}
+                                    onClick={() => setResolution(r.value)}
+                                    className={`px-2 py-1 text-xs rounded border transition-colors ${resolution === r.value
+                                        ? 'bg-purple-500/20 border-purple-500 text-white'
+                                        : 'bg-zinc-800 border-zinc-600 text-zinc-400 hover:border-zinc-500'
+                                        }`}
+                                    title={r.pixels}
+                                >
+                                    {r.label}
                                 </button>
                             ))}
                         </div>

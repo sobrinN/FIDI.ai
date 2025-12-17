@@ -198,6 +198,7 @@ export interface VideoGenerationParams {
   prompt: string;
   model?: string;
   aspectRatio?: string;
+  resolution?: string;
   duration?: string;
 }
 
@@ -241,6 +242,7 @@ export async function generateVideo(params: VideoGenerationParams | string): Pro
       prompt: params.prompt,
       model: params.model,
       aspectRatio: params.aspectRatio,
+      resolution: params.resolution,
       duration: params.duration
     };
 
