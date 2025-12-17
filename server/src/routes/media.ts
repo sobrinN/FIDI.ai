@@ -9,12 +9,13 @@ export const mediaRouter = Router();
 const REPLICATE_API_BASE = 'https://api.replicate.com/v1';
 
 // Allowed models and defaults for media generation
+// Only official Replicate models - these work with /models/{owner}/{model}/predictions endpoint
 const IMAGE_MODELS = {
   default: 'black-forest-labs/flux-1.1-pro',
   allowed: [
-    'prunaai/z-image-turbo',
-    'qwen/qwen-image',
-    'black-forest-labs/flux-1.1-pro'
+    'black-forest-labs/flux-1.1-pro',
+    'black-forest-labs/flux-schnell',
+    'stability-ai/stable-diffusion-3.5-large-turbo'
   ]
 };
 
@@ -157,7 +158,9 @@ mediaRouter.post('/image', checkTokenQuota(TOKEN_COSTS.IMAGE_GENERATION), async 
       resolution: resolution || '1080p'
     });
 
-    const response = await fetch(`${REPLICATE_API_BASE}/predictions`, {
+    // Use the official model endpoint for cleaner API calls
+    const [owner, modelName] = selectedModel.split('/');
+    const response = await fetch(`${REPLICATE_API_BASE}/models/${owner}/${modelName}/predictions`, {
       method: 'POST',
       headers: {
         'Authorization': `Token ${apiKey}`,
@@ -165,12 +168,12 @@ mediaRouter.post('/image', checkTokenQuota(TOKEN_COSTS.IMAGE_GENERATION), async 
         'Prefer': 'wait'
       },
       body: JSON.stringify({
-        model: selectedModel,
         input: {
           prompt: enhancedPrompt,
           aspect_ratio: selectedAspectRatio,
           output_format: 'png',
-          output_quality: 90
+          output_quality: 90,
+          prompt_upsampling: true
         }
       })
     });
@@ -274,7 +277,9 @@ mediaRouter.post('/video', checkTokenQuota(TOKEN_COSTS.VIDEO_GENERATION), async 
       duration: selectedDuration
     });
 
-    const response = await fetch(`${REPLICATE_API_BASE}/predictions`, {
+    // Use the official model endpoint for cleaner API calls
+    const [owner, modelName] = selectedModel.split('/');
+    const response = await fetch(`${REPLICATE_API_BASE}/models/${owner}/${modelName}/predictions`, {
       method: 'POST',
       headers: {
         'Authorization': `Token ${apiKey}`,
@@ -282,7 +287,6 @@ mediaRouter.post('/video', checkTokenQuota(TOKEN_COSTS.VIDEO_GENERATION), async 
         'Prefer': 'wait'
       },
       body: JSON.stringify({
-        model: selectedModel,
         input: {
           prompt: enhancedPrompt,
           aspect_ratio: selectedAspectRatio,

@@ -10,7 +10,7 @@ interface UseAutoScrollOptions {
   /**
    * Dependencies that should trigger scroll check
    */
-  dependencies: any[];
+  dependencies: unknown[];
   /**
    * Whether auto-scroll is enabled
    */

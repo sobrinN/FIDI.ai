@@ -20,29 +20,29 @@ export interface VideoModel extends Omit<MediaModel, 'supportsResolutions'> {
     supportsDurations: ('5s' | '10s')[];
 }
 
-// Image generation models
+// Image generation models - Official Replicate models only
 export const IMAGE_MODELS: MediaModel[] = [
     {
-        id: 'prunaai/z-image-turbo',
-        name: 'Z-Image Turbo',
-        provider: 'PrunaAI',
+        id: 'black-forest-labs/flux-schnell',
+        name: 'FLUX Schnell',
+        provider: 'Black Forest Labs',
         badge: 'FAST',
         badgeColor: 'bg-green-500/20 text-green-400',
-        description: 'Ultra-fast photorealistic generation with text support',
+        description: 'Ultra-fast generation with great quality',
         supportsResolutions: ['720p', '1080p'],
         supportsAspectRatios: ['16:9', '4:3', '4:5', '1:1', '9:16'],
-        pricing: '$0.0025-$0.01'
+        pricing: '~$0.003'
     },
     {
-        id: 'qwen/qwen-image',
-        name: 'Qwen Image',
-        provider: 'Alibaba',
-        badge: 'FREE',
+        id: 'stability-ai/stable-diffusion-3.5-large-turbo',
+        name: 'SD 3.5 Large Turbo',
+        provider: 'Stability AI',
+        badge: 'FAST',
         badgeColor: 'bg-blue-500/20 text-blue-400',
-        description: 'Quality image generation with good prompt adherence',
+        description: 'High quality with excellent prompt adherence',
         supportsResolutions: ['720p', '1080p'],
-        supportsAspectRatios: ['16:9', '4:3', '1:1'],
-        pricing: 'FREE'
+        supportsAspectRatios: ['16:9', '4:3', '4:5', '1:1', '9:16'],
+        pricing: '~$0.04'
     },
     {
         id: 'black-forest-labs/flux-1.1-pro',

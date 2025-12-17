@@ -5,6 +5,28 @@ All notable changes to FIDI.ai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.5] - 2025-12-16
+
+### Fixed
+- **Replicate API Error**: Fixed "version is required - Additional property model is not allowed"
+  - Root cause: Using official-model-only endpoint for non-official models
+  - Solution: Migrated to official Replicate models only
+
+### Changed
+- **NENECA Image Models**: Updated to official Replicate models
+  - FLUX Schnell (fast, ~$0.003)
+  - SD 3.5 Large Turbo (fast, ~$0.04)
+  - FLUX 1.1 Pro (best quality, ~$0.04)
+
+### Removed
+- Deleted redundant documentation (QUICKSTART.md, server/*.md)
+
+### Documentation
+- Updated CLAUDE.md to v0.4.5
+- Fixed version inconsistencies in README.md
+
+---
+
 ## [0.4.4] - 2025-12-16
 
 ### Changed

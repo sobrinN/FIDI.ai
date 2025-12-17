@@ -48,10 +48,11 @@ const ERROR_MESSAGES: Record<ErrorType, string> = {
 /**
  * Classify an error from OpenRouter or internal sources
  */
-export function classifyError(error: any): ClassifiedError {
-    const statusCode = error.statusCode || error.status || 500;
-    const message = error.message || String(error);
-    const errorName = error.name || '';
+export function classifyError(error: unknown): ClassifiedError {
+    const err = error as Record<string, unknown>;
+    const statusCode = (err?.statusCode as number) || (err?.status as number) || 500;
+    const message = (err?.message as string) || String(error);
+    const errorName = (err?.name as string) || '';
 
     // Check for specific error patterns
 

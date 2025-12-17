@@ -1,6 +1,6 @@
 # FIDI.ai - Multi-Agent AI Platform
 
-**Version 0.4.0** | Enterprise-grade multi-agent AI platform built with React 19, TypeScript, and Express.
+**Version 0.4.5** | Enterprise-grade multi-agent AI platform built with React 19, TypeScript, and Express.
 
 Features 4 specialized AI agents powered by OpenRouter (Grok) and Replicate APIs with secure backend architecture.
 
@@ -146,4 +146,4 @@ MIT
 
 ---
 
-**Built by FIDI.ai Team** | v0.4.4
+**Built by FIDI.ai Team** | v0.4.5

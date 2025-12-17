@@ -6,7 +6,7 @@ import { formatMessagesForModel } from '../lib/modelAdapters.js';
 import { isAllowedModel, getAllowedModelsString, getModelCostMultiplier } from '../config/allowedModels.js';
 import { deductTokens, getTokenBalance } from '../lib/tokenService.js';
 import { getModelsToAttempt } from '../config/fallbackConfig.js';
-import { classifyError, shouldTriggerFallback, isTerminalError, ErrorType } from '../lib/errorClassifier.js';
+import { classifyError, shouldTriggerFallback, isTerminalError, ErrorType, ClassifiedError } from '../lib/errorClassifier.js';
 
 
 export const chatRouter = Router();
@@ -172,7 +172,8 @@ chatRouter.post('/stream', async (req: AuthRequest, res, next) => {
     // FALLBACK LOGIC: Get models to attempt (primary + fallbacks)
     const modelsToAttempt = getModelsToAttempt(model);
     const attemptedModels: string[] = [];
-    let lastClassifiedError: any = null;
+    // Use object wrapper to prevent TypeScript closure narrowing issues
+    const errorState: { lastClassifiedError: ClassifiedError | null } = { lastClassifiedError: null };
     let successfulModel: string | null = null;
 
     /**
@@ -282,7 +283,7 @@ chatRouter.post('/stream', async (req: AuthRequest, res, next) => {
       } catch (error) {
         // Classify the error
         const classified = classifyError(error);
-        lastClassifiedError = classified;
+        errorState.lastClassifiedError = classified;
 
         console.error(`[Chat Fallback] Model ${currentModel} failed:`, {
           type: classified.type,
@@ -345,14 +346,16 @@ chatRouter.post('/stream', async (req: AuthRequest, res, next) => {
       if (!successfulModel) {
         console.error(`[Chat Fallback] All models exhausted. Attempted: ${attemptedModels.join(', ')}`);
 
+        // Explicit typing for error data construction
+        const classifiedErr = errorState.lastClassifiedError;
         const errorData = {
-          error: lastClassifiedError?.userFriendlyMessage || 'All models failed to respond',
-          code: lastClassifiedError?.type || ErrorType.UNKNOWN,
-          errorType: lastClassifiedError?.type || ErrorType.UNKNOWN,
+          error: classifiedErr?.userFriendlyMessage || 'All models failed to respond',
+          code: classifiedErr?.type || ErrorType.UNKNOWN,
+          errorType: classifiedErr?.type || ErrorType.UNKNOWN,
           attemptedModels,
           allFailed: true,
           retryable: false,
-          technicalDetails: lastClassifiedError?.technicalDetails
+          technicalDetails: classifiedErr?.technicalDetails
         };
 
         res.write(`data: ${JSON.stringify(errorData)}\n\n`);

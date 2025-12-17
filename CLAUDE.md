@@ -2,8 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Version:** 0.4.1
-**Last Updated:** 2025-12-15
+**Version:** 0.4.5
+**Last Updated:** 2025-12-16
 
 ## Project Overview
 
@@ -453,27 +453,22 @@ npm run test:coverage # Coverage report
 
 See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 
-## Recent Changes (v0.4.4)
+## Recent Changes (v0.4.5)
 
-### Critical Fixes
-- File locking system for race-safe user storage
-- Fixed `deleteConversation` stale closure bug
-- Replaced setTimeout hack with `flushSync` in handleSend
+### Replicate API Fix
+- Fixed "version is required - Additional property model is not allowed" error
+- Migrated to official Replicate models only (work with `/models/{owner}/{model}/predictions` endpoint)
+- Removed non-official models that required version hashes
 
-### High Priority Fixes
-- Session verification on app mount
-- Token pre-check for chat route (FREE tier bypass)
-- Google/Gemini model adapters
-- Exposed `isInitialized` state from useConversations
+### NENECA Image Models (Official)
+| Model | Speed | Price |
+|-------|-------|-------|
+| FLUX Schnell | Fast | ~$0.003 |
+| SD 3.5 Large Turbo | Fast | ~$0.04 |
+| FLUX 1.1 Pro | Best | ~$0.04 |
 
-### Medium Priority Fixes
-- Type safety in admin routes (replaced `any`)
-- Centralized migration logic in userStorage
-- Memoized conversation lookups with `useMemo`
-- Fixed RefObject types in hooks
+### Documentation Cleanup
+- Deleted redundant markdown files (QUICKSTART.md, server/*.md)
+- Fixed version inconsistencies across documentation
+- Consolidated API documentation into CLAUDE.md
 
-### Other Fixes
-- Installed `@types/react-dom`
-- Fixed unused imports and variables
-- Fixed test file type errors
-- Fixed MarkdownRenderer lazy style loading
