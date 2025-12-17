@@ -16,7 +16,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
     onClearCanvas
 }) => {
     return (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-4 py-2 bg-zinc-900/90 backdrop-blur-sm border border-zinc-700 rounded-xl shadow-2xl">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 bg-zinc-900/90 backdrop-blur-sm border border-zinc-700 rounded-xl shadow-2xl pointer-events-auto">
             {/* Add buttons */}
             <div className="flex items-center gap-1">
                 <button

@@ -6,10 +6,10 @@
       "name": "Ygor Sobrinho",
       "password": "$2a$10$0tlovvUgW2NWfkTcYTXnxe.FfMGc3zLZYNdHS5NMWtND5yqTjJomu",
       "createdAt": 1765821807958,
-      "updatedAt": 1765821807958,
-      "tokenBalance": 50000,
-      "tokenUsageTotal": 0,
-      "tokenUsageThisMonth": 0,
+      "updatedAt": 1765940086270,
+      "tokenBalance": 45000,
+      "tokenUsageTotal": 5000,
+      "tokenUsageThisMonth": 5000,
       "lastTokenReset": 1765821807959,
       "isAdmin": false
     }
