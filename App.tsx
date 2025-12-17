@@ -18,9 +18,9 @@ import { runMigrations } from './lib/migration';
 // Code-split heavy components
 const ChatInterface = lazy(() => import('./components/ChatInterface').then(m => ({ default: m.ChatInterface })));
 const Auth = lazy(() => import('./components/Auth').then(m => ({ default: m.Auth })));
-const AgentsPage = lazy(() => import('./components/AgentsPage').then(m => ({ default: m.AgentsPage })));
 
-type ViewState = 'landing' | 'chat' | 'auth' | 'agents';
+
+type ViewState = 'landing' | 'chat' | 'auth';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -203,11 +203,11 @@ export default function App() {
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
             className="relative z-10"
           >
-            <Navbar 
-              scrollY={scrollY} 
-              onAccessSystem={handleAccessSystem} 
+            <Navbar
+              scrollY={scrollY}
+              onAccessSystem={handleAccessSystem}
               onLoginClick={() => setView('auth')}
-              onAgentsClick={() => setView('agents')}
+
               currentUser={currentUser}
               onLogout={handleLogout}
             />
@@ -235,21 +235,7 @@ export default function App() {
               </motion.div>
             </ErrorBoundary>
           </Suspense>
-        ) : view === 'agents' ? (
-          <Suspense fallback={<LoadingSpinner />}>
-            <ErrorBoundary>
-              <motion.div
-                key="agents"
-                initial={{ opacity: 0, scale: 1.1, filter: 'blur(20px)' }}
-                animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, scale: 0.9, filter: 'blur(20px)' }}
-                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-                className="relative z-20 min-h-screen w-full"
-              >
-                <AgentsPage onBack={() => setView('landing')} />
-              </motion.div>
-            </ErrorBoundary>
-          </Suspense>
+
         ) : (
           <Suspense fallback={<LoadingSpinner />}>
             <ErrorBoundary>

@@ -8,14 +8,27 @@ export const mediaRouter = Router();
 
 const REPLICATE_API_BASE = 'https://api.replicate.com/v1';
 
-// FIX: Use proper Replicate version hashes instead of model names
-// Note: These are version-specific hashes. Update when using different model versions.
-const MODELS = {
-  // FLUX 1.1 Pro - Fast, high-quality image generation
-  IMAGE: 'black-forest-labs/flux-1.1-pro',
-  // MiniMax Video-01 - Text-to-video generation
-  VIDEO: 'minimax/video-01'
+// Allowed models and defaults for media generation
+const IMAGE_MODELS = {
+  default: 'black-forest-labs/flux-1.1-pro',
+  allowed: [
+    'prunaai/z-image-turbo',
+    'qwen/qwen-image',
+    'black-forest-labs/flux-1.1-pro'
+  ]
 };
+
+const VIDEO_MODELS = {
+  default: 'wan-video/wan-2.2-t2v-fast',
+  allowed: [
+    'wan-video/wan-2.2-t2v-fast',
+    'kwaivgi/kling-v1.6-pro'
+  ]
+};
+
+// Valid aspect ratios and settings
+const VALID_ASPECT_RATIOS = ['16:9', '4:3', '4:5', '1:1', '9:16'];
+const VALID_DURATIONS = ['5s', '10s'];
 
 interface ReplicatePrediction {
   id: string;
@@ -104,7 +117,7 @@ async function pollPrediction(getUrl: string, apiKey: string): Promise<Replicate
 
 mediaRouter.post('/image', checkTokenQuota(TOKEN_COSTS.IMAGE_GENERATION), async (req: AuthRequest, res, next): Promise<void> => {
   try {
-    const { prompt } = req.body;
+    const { prompt, model, aspectRatio, resolution } = req.body;
 
     if (!prompt || typeof prompt !== 'string') {
       throw new APIError('Invalid or missing prompt', 400, 'INVALID_PROMPT');
@@ -119,7 +132,30 @@ mediaRouter.post('/image', checkTokenQuota(TOKEN_COSTS.IMAGE_GENERATION), async 
       throw new APIError('REPLICATE_API_KEY not configured', 500, 'MISSING_API_KEY');
     }
 
-    const enhancedPrompt = `${prompt}, high quality, detailed, professional photography, 8k resolution`;
+    // Validate and use model or default
+    const selectedModel = model && IMAGE_MODELS.allowed.includes(model)
+      ? model
+      : IMAGE_MODELS.default;
+
+    // Validate aspect ratio
+    const selectedAspectRatio = aspectRatio && VALID_ASPECT_RATIOS.includes(aspectRatio)
+      ? aspectRatio
+      : '1:1';
+
+    // Build quality suffix based on resolution
+    const qualitySuffix = resolution === '4k'
+      ? '8k ultra high resolution'
+      : resolution === '1080p'
+        ? 'high quality, detailed'
+        : 'quality';
+
+    const enhancedPrompt = `${prompt}, ${qualitySuffix}, professional photography`;
+
+    console.log('[Media] Image generation request', {
+      model: selectedModel,
+      aspectRatio: selectedAspectRatio,
+      resolution: resolution || '1080p'
+    });
 
     const response = await fetch(`${REPLICATE_API_BASE}/predictions`, {
       method: 'POST',
@@ -129,10 +165,10 @@ mediaRouter.post('/image', checkTokenQuota(TOKEN_COSTS.IMAGE_GENERATION), async 
         'Prefer': 'wait'
       },
       body: JSON.stringify({
-        model: MODELS.IMAGE,
+        model: selectedModel,
         input: {
           prompt: enhancedPrompt,
-          aspect_ratio: '1:1',
+          aspect_ratio: selectedAspectRatio,
           output_format: 'png',
           output_quality: 90
         }
@@ -200,7 +236,7 @@ mediaRouter.post('/image', checkTokenQuota(TOKEN_COSTS.IMAGE_GENERATION), async 
 
 mediaRouter.post('/video', checkTokenQuota(TOKEN_COSTS.VIDEO_GENERATION), async (req: AuthRequest, res, next): Promise<void> => {
   try {
-    const { prompt } = req.body;
+    const { prompt, model, aspectRatio, duration } = req.body;
 
     if (!prompt || typeof prompt !== 'string') {
       throw new APIError('Invalid or missing prompt', 400, 'INVALID_PROMPT');
@@ -215,7 +251,28 @@ mediaRouter.post('/video', checkTokenQuota(TOKEN_COSTS.VIDEO_GENERATION), async 
       throw new APIError('REPLICATE_API_KEY not configured', 500, 'MISSING_API_KEY');
     }
 
+    // Validate and use model or default
+    const selectedModel = model && VIDEO_MODELS.allowed.includes(model)
+      ? model
+      : VIDEO_MODELS.default;
+
+    // Validate aspect ratio
+    const selectedAspectRatio = aspectRatio && VALID_ASPECT_RATIOS.includes(aspectRatio)
+      ? aspectRatio
+      : '16:9';
+
+    // Validate duration
+    const selectedDuration = duration && VALID_DURATIONS.includes(duration)
+      ? duration
+      : '5s';
+
     const enhancedPrompt = `${prompt}, cinematic, smooth motion, high quality, professional`;
+
+    console.log('[Media] Video generation request', {
+      model: selectedModel,
+      aspectRatio: selectedAspectRatio,
+      duration: selectedDuration
+    });
 
     const response = await fetch(`${REPLICATE_API_BASE}/predictions`, {
       method: 'POST',
@@ -225,9 +282,11 @@ mediaRouter.post('/video', checkTokenQuota(TOKEN_COSTS.VIDEO_GENERATION), async 
         'Prefer': 'wait'
       },
       body: JSON.stringify({
-        model: MODELS.VIDEO,
+        model: selectedModel,
         input: {
-          prompt: enhancedPrompt
+          prompt: enhancedPrompt,
+          aspect_ratio: selectedAspectRatio,
+          duration: selectedDuration
         }
       })
     });

@@ -15,6 +15,7 @@ import { MarkdownRenderer } from './MarkdownRenderer';
 import { MESSAGE_LIMITS, UI } from '../config/constants';
 import { TokenBalance } from './TokenBalance';
 import { ModelSelector } from './ModelSelector';
+import { MediaCanvas } from './canvas/MediaCanvas';
 
 
 interface ChatInterfaceProps {
@@ -371,7 +372,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
       },
       onFallback: (primaryModel: string, actualModel: string, message: string) => {
         // Show fallback notification without disrupting the stream
-        console.log(`[Fallback] ${message}`);
         setFallbackNotification({ primaryModel, actualModel, message });
 
         // Auto-dismiss after 10 seconds
@@ -598,6 +598,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBack, currentUse
       setSelectedAgentId(agentId);
     }
   };
+
+  // Render MediaCanvas for NENECA agent (agent 04)
+  if (selectedAgentId === '04') {
+    return <MediaCanvas currentUser={currentUser} onBack={onBack} />;
+  }
 
   return (
     <div className="flex h-screen bg-black overflow-hidden relative">

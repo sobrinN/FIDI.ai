@@ -185,7 +185,33 @@ export async function streamChatCompletion({
 }
 
 
-export async function generateImage(prompt: string): Promise<string> {
+// Image generation parameters
+export interface ImageGenerationParams {
+  prompt: string;
+  model?: string;
+  aspectRatio?: string;
+  resolution?: string;
+}
+
+// Video generation parameters
+export interface VideoGenerationParams {
+  prompt: string;
+  model?: string;
+  aspectRatio?: string;
+  duration?: string;
+}
+
+export async function generateImage(params: ImageGenerationParams | string): Promise<string> {
+  // Support both old string signature and new object signature
+  const body = typeof params === 'string'
+    ? { prompt: params }
+    : {
+      prompt: params.prompt,
+      model: params.model,
+      aspectRatio: params.aspectRatio,
+      resolution: params.resolution
+    };
+
   return retryWithBackoff(async () => {
     try {
       const response = await fetch(`${API_BASE}/api/media/image`, {
@@ -194,7 +220,7 @@ export async function generateImage(prompt: string): Promise<string> {
           'Content-Type': 'application/json'
         },
         credentials: 'include',
-        body: JSON.stringify({ prompt })
+        body: JSON.stringify(body)
       });
 
       await handleResponse(response);
@@ -207,7 +233,17 @@ export async function generateImage(prompt: string): Promise<string> {
   });
 }
 
-export async function generateVideo(prompt: string): Promise<string> {
+export async function generateVideo(params: VideoGenerationParams | string): Promise<string> {
+  // Support both old string signature and new object signature
+  const body = typeof params === 'string'
+    ? { prompt: params }
+    : {
+      prompt: params.prompt,
+      model: params.model,
+      aspectRatio: params.aspectRatio,
+      duration: params.duration
+    };
+
   return retryWithBackoff(async () => {
     try {
       const response = await fetch(`${API_BASE}/api/media/video`, {
@@ -216,7 +252,7 @@ export async function generateVideo(prompt: string): Promise<string> {
           'Content-Type': 'application/json'
         },
         credentials: 'include',
-        body: JSON.stringify({ prompt })
+        body: JSON.stringify(body)
       });
 
       await handleResponse(response);
