@@ -37,7 +37,7 @@ const ImageNodeComponent: React.FC<NodeProps> = ({ data }) => {
             const url = await generateImage({ prompt, model, aspectRatio, resolution });
             setOutputUrl(url);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Generation failed');
+            setError(err instanceof Error ? err.message : 'Falha na geração');
         } finally {
             setIsGenerating(false);
         }
@@ -56,7 +56,7 @@ const ImageNodeComponent: React.FC<NodeProps> = ({ data }) => {
             <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-gray-50">
                 <div className="flex items-center gap-2">
                     <ImageIcon size={14} className="text-text-primary" />
-                    <span className="text-xs font-mono uppercase tracking-wide font-bold text-text-primary">Image</span>
+                    <span className="text-xs font-mono uppercase tracking-wide font-bold text-text-primary">Imagem</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="text-[10px] text-text-secondary font-mono">{currentModel.name}</span>
@@ -73,7 +73,7 @@ const ImageNodeComponent: React.FC<NodeProps> = ({ data }) => {
             {showSettings && (
                 <div className="px-3 py-3 border-b border-gray-200 bg-gray-50 space-y-3">
                     <div>
-                        <label className="text-[9px] text-text-secondary uppercase tracking-widest font-mono">Model</label>
+                        <label className="text-[9px] text-text-secondary uppercase tracking-widest font-mono">Modelo</label>
                         <select
                             value={model}
                             onChange={(e) => setModel(e.target.value)}
@@ -85,7 +85,7 @@ const ImageNodeComponent: React.FC<NodeProps> = ({ data }) => {
                         </select>
                     </div>
                     <div>
-                        <label className="text-[9px] text-text-secondary uppercase tracking-widest font-mono">Ratio</label>
+                        <label className="text-[9px] text-text-secondary uppercase tracking-widest font-mono">Proporção</label>
                         <div className="flex gap-1 mt-1 flex-wrap">
                             {ASPECT_RATIOS.map(ar => (
                                 <button
@@ -102,7 +102,7 @@ const ImageNodeComponent: React.FC<NodeProps> = ({ data }) => {
                         </div>
                     </div>
                     <div>
-                        <label className="text-[9px] text-text-secondary uppercase tracking-widest font-mono">Resolution</label>
+                        <label className="text-[9px] text-text-secondary uppercase tracking-widest font-mono">Resolução</label>
                         <div className="flex gap-1 mt-1">
                             {supportedResolutions.map(r => (
                                 <button
@@ -126,7 +126,7 @@ const ImageNodeComponent: React.FC<NodeProps> = ({ data }) => {
                 <textarea
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="Describe the image..."
+                    placeholder="Descreva a imagem..."
                     className="w-full h-16 px-2 py-2 bg-gray-50 border border-gray-200 rounded-sm text-xs text-text-primary placeholder-text-secondary focus:border-black focus:outline-none resize-none font-sans"
                 />
             </div>
@@ -164,7 +164,7 @@ const ImageNodeComponent: React.FC<NodeProps> = ({ data }) => {
                         }`}
                 >
                     {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
-                    <span>Generate</span>
+                    <span>Gerar</span>
                 </button>
             </div>
 

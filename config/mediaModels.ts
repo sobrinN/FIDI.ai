@@ -28,7 +28,7 @@ export const IMAGE_MODELS: MediaModel[] = [
         provider: 'Black Forest Labs',
         badge: 'PRO',
         badgeColor: 'bg-purple-500/20 text-purple-400',
-        description: 'Highest quality with advanced prompt understanding',
+        description: 'Maior qualidade com compreensão avançada de prompts',
         supportsResolutions: ['720p', '1080p'],
         supportsAspectRatios: ['16:9', '4:3', '4:5', '1:1', '9:16'],
         pricing: 'Premium'
@@ -39,7 +39,7 @@ export const IMAGE_MODELS: MediaModel[] = [
         provider: 'Black Forest Labs',
         badge: 'FAST',
         badgeColor: 'bg-green-500/20 text-green-400',
-        description: 'Fast generation optimized for speed and quality',
+        description: 'Geração rápida otimizada para velocidade e qualidade',
         supportsResolutions: ['720p', '1080p'],
         supportsAspectRatios: ['16:9', '4:3', '4:5', '1:1', '9:16'],
         pricing: 'Fast'
@@ -50,7 +50,7 @@ export const IMAGE_MODELS: MediaModel[] = [
         provider: 'Qwen',
         badge: 'PRO',
         badgeColor: 'bg-blue-500/20 text-blue-400',
-        description: 'Strong prompt understanding with Chinese support',
+        description: 'Forte compreensão de prompts com suporte a chinês',
         supportsResolutions: ['720p', '1080p'],
         supportsAspectRatios: ['16:9', '4:3', '4:5', '1:1', '9:16'],
         pricing: 'Standard'
@@ -61,7 +61,7 @@ export const IMAGE_MODELS: MediaModel[] = [
         provider: 'Qwen',
         badge: 'PRO',
         badgeColor: 'bg-orange-500/20 text-orange-400',
-        description: 'Advanced image editing and manipulation',
+        description: 'Edição e manipulação avançada de imagens',
         supportsResolutions: ['720p', '1080p'],
         supportsAspectRatios: ['16:9', '4:3', '4:5', '1:1', '9:16'],
         pricing: 'Standard'
@@ -72,7 +72,7 @@ export const IMAGE_MODELS: MediaModel[] = [
         provider: 'Bytedance',
         badge: 'PRO',
         badgeColor: 'bg-pink-500/20 text-pink-400',
-        description: 'High-fidelity generation up to 4K resolution',
+        description: 'Geração de alta fidelidade até 4K',
         supportsResolutions: ['720p', '1080p', '4k'],
         supportsAspectRatios: ['16:9', '4:3', '4:5', '1:1', '9:16'],
         pricing: 'Premium'
@@ -87,7 +87,7 @@ export const VIDEO_MODELS: VideoModel[] = [
         provider: 'WAN Video',
         badge: 'PRO',
         badgeColor: 'bg-purple-500/20 text-purple-400',
-        description: 'Replace characters in existing videos with new subjects',
+        description: 'Substitua personagens em vídeos existentes por novos',
         supportsResolutions: ['720p', '1080p'],
         supportsAspectRatios: ['16:9', '4:3', '1:1'],
         supportsDurations: ['5s'],
@@ -99,7 +99,7 @@ export const VIDEO_MODELS: VideoModel[] = [
         provider: 'WAN Video',
         badge: 'FAST',
         badgeColor: 'bg-green-500/20 text-green-400',
-        description: 'Fast image-to-video with motion description',
+        description: 'Imagem para vídeo rápido com descrição de movimento',
         supportsResolutions: ['720p', '1080p'],
         supportsAspectRatios: ['16:9', '4:3', '1:1'],
         supportsDurations: ['5s'],
@@ -111,7 +111,7 @@ export const VIDEO_MODELS: VideoModel[] = [
         provider: 'MiniMax',
         badge: 'FAST',
         badgeColor: 'bg-blue-500/20 text-blue-400',
-        description: 'Motion-guided video from static frames',
+        description: 'Vídeo guiado por movimento a partir de frames estáticos',
         supportsResolutions: ['720p', '1080p'],
         supportsAspectRatios: ['16:9', '9:16', '1:1'],
         supportsDurations: ['5s'],
@@ -121,10 +121,10 @@ export const VIDEO_MODELS: VideoModel[] = [
 
 // Aspect ratio options with labels
 export const ASPECT_RATIOS = [
-    { value: '16:9', label: '16:9', description: 'Landscape (YouTube, Cinema)' },
-    { value: '4:3', label: '4:3', description: 'Classic' },
-    { value: '4:5', label: '4:5', description: 'Portrait (Instagram)' },
-    { value: '1:1', label: '1:1', description: 'Square' },
+    { value: '16:9', label: '16:9', description: 'Paisagem (YouTube, Cinema)' },
+    { value: '4:3', label: '4:3', description: 'Clássico' },
+    { value: '4:5', label: '4:5', description: 'Retrato (Instagram)' },
+    { value: '1:1', label: '1:1', description: 'Quadrado' },
     { value: '9:16', label: '9:16', description: 'Vertical (Stories, TikTok)' }
 ] as const;
 
@@ -137,8 +137,8 @@ export const RESOLUTIONS = [
 
 // Duration options for video
 export const DURATIONS = [
-    { value: '5s', label: '5 seconds', description: 'Quick clips' },
-    { value: '10s', label: '10 seconds', description: 'Extended scenes' }
+    { value: '5s', label: '5 segundos', description: 'Clipes rápidos' },
+    { value: '10s', label: '10 segundos', description: 'Cenas estendidas' }
 ] as const;
 
 // Helper functions

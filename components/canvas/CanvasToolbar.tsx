@@ -24,7 +24,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
                 className="flex items-center gap-2 px-3 py-2 text-xs font-mono uppercase tracking-wide text-text-primary hover:bg-gray-100 rounded-sm transition-colors"
             >
                 <ImageIcon size={14} />
-                <span>Image</span>
+                <span>Imagem</span>
                 <Plus size={10} className="text-text-secondary" />
             </button>
 
@@ -35,7 +35,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
                 className="flex items-center gap-2 px-3 py-2 text-xs font-mono uppercase tracking-wide text-text-primary hover:bg-gray-100 rounded-sm transition-colors"
             >
                 <Video size={14} />
-                <span>Video</span>
+                <span>Vídeo</span>
                 <Plus size={10} className="text-text-secondary" />
             </button>
 
@@ -47,7 +47,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
                 className="flex items-center gap-2 px-3 py-2 text-xs font-mono uppercase tracking-wide text-red-500 hover:bg-red-50 rounded-sm transition-colors"
             >
                 <Trash2 size={14} />
-                <span>Clear</span>
+                <span>Limpar</span>
             </button>
         </div>
     );
