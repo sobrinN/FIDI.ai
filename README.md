@@ -1,27 +1,51 @@
-# FIDI.ai - Multi-Agent AI Platform
+# FIDI.ai - Multi-Model AI Chat & Media Canvas Platform
 
-**Version 0.4.5** | Enterprise-grade multi-agent AI platform built with React 19, TypeScript, and Express.
+**Version 1.0.0** | Modern AI platform built with React 19, TypeScript, and Express.
 
-Features 4 specialized AI agents powered by OpenRouter (Grok) and Replicate APIs with secure backend architecture.
+> Chat with efficient LLMs from multiple providers, and generate images/videos using a node-based canvas.
 
-## Quick Start
+## ✨ Features
+
+### 🤖 Multi-Model LLM Chat
+- **7 AI Models** from Google, X.AI, Anthropic, OpenAI, DeepSeek, and MiniMax
+- Real-time streaming responses via SSE
+- Model selection per conversation
+- FREE and PAID tiers with token cost multipliers
+
+### 🎨 Media Canvas
+- **Node-based workspace** using @xyflow/react
+- **5 Image Models**: FLUX 2 Pro, FLUX 2 Dev, Qwen Image, Qwen Edit Plus, Seedream 4.5
+- **3 Video Models**: WAN Animate Replace, WAN i2v Fast, Hailuo 02 Fast
+- Configurable aspect ratios, resolutions, and durations
+- Drag, connect, and arrange nodes freely
+
+### 💳 Token Credit System
+- FREE users: 1M credits | PRO users: 10M credits
+- Model-based cost multipliers (1.5x standard, 2.0x premium)
+- Real-time balance display
+
+### 🔒 Security
+- Server-side API keys (OpenRouter + Replicate)
+- JWT authentication with HTTP-only cookies
+- Rate limiting and model allowlist
+- XSS protection via DOMPurify
+
+## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+ and npm
-- OpenRouter API key: https://openrouter.ai
-- Replicate API key (optional): https://replicate.com
+- Node.js 18+
+- [OpenRouter API key](https://openrouter.ai)
+- [Replicate API key](https://replicate.com) (for media generation)
 
 ### Installation
 
 ```bash
-# Clone and install
-git clone <repository-url>
+# Clone repository
+git clone https://github.com/sobrinN/FIDI.ai
 cd FIDI.ai
 
-# Install frontend dependencies
+# Install dependencies
 npm install
-
-# Install backend dependencies
 cd server && npm install && cd ..
 
 # Configure environment
@@ -31,8 +55,6 @@ cp server/.env.example server/.env
 
 ### Running
 
-**Two terminals required:**
-
 ```bash
 # Terminal 1: Backend (http://localhost:3001)
 cd server && npm run dev
@@ -41,67 +63,31 @@ cd server && npm run dev
 npm run dev
 ```
 
-Open http://localhost:3000 in your browser.
+Open **http://localhost:3000** in your browser.
 
-## Architecture
+## 📁 Project Structure
 
 ```
-Frontend (React 19 + Vite)     Backend (Express + TypeScript)
-┌─────────────────────┐        ┌─────────────────────┐
-│ Landing Page        │        │ /api/auth           │
-│ Authentication      │  ───►  │ /api/chat (SSE)     │
-│ Chat Interface      │  ◄───  │ /api/media          │
-│ Agent Selection     │        │                     │
-└─────────────────────┘        └─────────────────────┘
-         │                              │
-         ▼                              ▼
-   localStorage               OpenRouter / Replicate
-   (Sessions, Chats)          (Server-side API keys)
+FIDI.ai/
+├── components/              # React UI components
+│   ├── ChatInterface.tsx    # Chat with model selector
+│   ├── ModelSelector.tsx    # LLM model dropdown
+│   ├── canvas/              # Media Canvas
+│   │   ├── MediaCanvas.tsx  # Node-based workspace
+│   │   └── nodes/           # ImageNode, VideoNode
+│   └── ...                  # Auth, Navbar, Landing page
+├── config/
+│   ├── models.ts            # LLM model definitions
+│   └── mediaModels.ts       # Image/video models
+├── hooks/                   # Custom React hooks
+├── lib/                     # Utilities
+├── server/                  # Express backend
+│   ├── src/routes/          # API endpoints
+│   └── src/lib/             # Token service, user storage
+└── App.tsx                  # Main application
 ```
 
-## Features
-
-### AI Agents
-
-| Agent | Role | Specialization |
-|-------|------|----------------|
-| **FIDI** | CORE / DEV | Software architecture, clean code |
-| **TUNIN** | COPY / TEXT | Copywriting, creative writing |
-| **MORCEGO** | SYS / ORG | Task management, organization |
-| **NENECA** | DESIGN / VIS | Image & video generation |
-
-### Security
-- API keys server-side only
-- JWT authentication (7-day expiry)
-- bcrypt password hashing
-- DOMPurify XSS protection
-- Rate limiting
-- Model allowlist
-
-### Performance
-- Code splitting (-70% bundle)
-- Lazy-loaded components
-- SSE streaming (2-min timeout)
-- Error boundaries
-
-## Tech Stack
-
-**Frontend:**
-- React 19
-- TypeScript
-- Vite
-- Tailwind CSS
-- Framer Motion
-- Lucide Icons
-
-**Backend:**
-- Express.js
-- TypeScript
-- OpenRouter SDK
-- JWT / bcryptjs
-- Helmet / CORS
-
-## Configuration
+## ⚙️ Configuration
 
 ### Backend (`server/.env`)
 ```
@@ -113,37 +99,59 @@ PORT=3001
 CLIENT_URL=http://localhost:3000
 ```
 
-### Frontend (`.env.local` - optional)
+### Frontend (`.env.local`)
 ```
 VITE_API_URL=http://localhost:3001
 ```
 
-## Commands
+## 🤖 Available Models
+
+### Chat Models
+| Model | Provider | Tier | Cost |
+|-------|----------|------|------|
+| Devstral 2512 | Mistral AI | FREE | 0x |
+| Gemini 3 Flash | Google | PAID | 1.5x |
+| Grok Code Fast 1 | X.AI | PAID | 1.5x |
+| GPT OSS 120B | OpenAI | PAID | 1.5x |
+| DeepSeek V3.2 | DeepSeek | PAID | 1.5x |
+| MiniMax M2 | MiniMax | PAID | 1.5x |
+| Claude Sonnet 4.5 | Anthropic | PAID | 2.0x |
+
+### Media Models (Canvas)
+| Type | Model | Provider |
+|------|-------|----------|
+| Image | FLUX 2 Pro/Dev | Black Forest Labs |
+| Image | Qwen Image/Edit Plus | Qwen |
+| Image | Seedream 4.5 (4K) | Bytedance |
+| Video | WAN Animate/i2v | WAN Video |
+| Video | Hailuo 02 Fast | MiniMax |
+
+## 🛠️ Commands
 
 ```bash
 # Development
-npm run dev           # Start frontend
-cd server && npm run dev  # Start backend
+npm run dev                    # Frontend
+cd server && npm run dev       # Backend
 
 # Build
-npm run build         # Build frontend
-cd server && npm run build  # Build backend
+npm run build                  # Frontend
+cd server && npm run build     # Backend
 
 # Test
-npm test              # Run tests
-npm run test:coverage # Coverage report
+npm test                       # Run tests
+npm run test:coverage          # Coverage report
 ```
 
-## Documentation
+## 📚 Documentation
 
 - [CLAUDE.md](./CLAUDE.md) - Development guide & architecture
 - [CHANGELOG.md](./CHANGELOG.md) - Version history
 - [SECURITY.md](./SECURITY.md) - Security implementation
 
-## License
+## 📄 License
 
 MIT
 
 ---
 
-**Built by FIDI.ai Team** | v0.4.5
+**Built by FIDI.ai Team** | v1.0.0
