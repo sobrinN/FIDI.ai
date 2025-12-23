@@ -1,5 +1,6 @@
 import React from 'react';
 import { Reveal } from './Reveal';
+import { HeroAnimation } from './HeroAnimation/HeroAnimation';
 
 export const Hero: React.FC = () => {
   return (
@@ -18,7 +19,7 @@ export const Hero: React.FC = () => {
         <Reveal delay={0.2} direction="up" width="100%">
           <h1 className="font-sans text-6xl md:text-8xl font-medium tracking-tighter leading-[0.9] mb-8 text-text-primary">
             Construa o futuro <br />
-            <span className="text-text-secondary">com inteligência.</span>
+            <span className="text-accent">com inteligência.</span>
           </h1>
         </Reveal>
 
@@ -51,6 +52,12 @@ export const Hero: React.FC = () => {
 
       {/* Subtle Grid Background (optional, kept minimal for now) */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none z-0"></div>
+
+      {/* Hero Animation Layer - Positioned purely visual */}
+      <div className="absolute top-1/2 right-0 -translate-y-1/2 w-full md:w-1/2 h-full z-0 opacity-40 md:opacity-100 pointer-events-none hidden md:block">
+        <HeroAnimation />
+      </div>
+
     </section>
   );
 };

@@ -35,7 +35,7 @@ export const Navbar: React.FC<NavbarProps> = ({ scrollY, onAccessSystem, onLogin
         {/* Logo */}
         <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo(0, 0); handleMobileClick(); }} className="group relative z-50">
           <span className="font-sans text-xl font-bold tracking-tight text-text-primary">
-            FIDI<span className="text-accent group-hover:text-accent transition-colors">.ai</span>
+            FIDI<span className="text-accent">.ai</span>
           </span>
         </a>
 

@@ -13,7 +13,7 @@ export const CallToAction: React.FC<CallToActionProps> = ({ onAccessSystem }) =>
         <Reveal direction="up" className="mx-auto">
           <h2 className="font-sans text-5xl md:text-8xl font-medium mb-12 tracking-tighter leading-none text-white">
             PRONTO PARA <br />
-            <span className="text-gray-500">EVOLUIR?</span>
+            <span className="text-accent">EVOLUIR?</span>
           </h2>
         </Reveal>
 
