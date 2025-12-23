@@ -39,3 +39,6 @@ openrouter-test.ts
 openrouter-model-ids.ts
 openrouter-models.json
 openrouter-model-ids.json
+
+# Test coverage output
+coverage/

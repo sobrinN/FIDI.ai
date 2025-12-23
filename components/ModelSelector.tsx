@@ -1,6 +1,6 @@
 import React from 'react';
-import { Lock } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ChevronLeft, ChevronRight, Palette } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { FREE_MODELS, PAID_MODELS, ModelInfo } from '../config/models';
 
 interface ModelSelectorProps {
@@ -8,114 +8,172 @@ interface ModelSelectorProps {
   onModelChange: (modelId: string | null) => void;
   disabled?: boolean;
   lockedReason?: string;
+  onMediaClick?: () => void;
 }
 
 export const ModelSelector: React.FC<ModelSelectorProps> = ({
   selectedModel,
   onModelChange,
   disabled = false,
-  lockedReason
+  lockedReason,
+  onMediaClick
 }) => {
+  const [activeCategory, setActiveCategory] = React.useState<'free' | 'paid' | null>(null);
+
   const handleModelSelect = (modelId: string) => {
     onModelChange(modelId);
   };
 
+  const isFreeSelected = selectedModel ? FREE_MODELS.some(m => m.id === selectedModel) : false;
+  const isPaidSelected = selectedModel ? PAID_MODELS.some(m => m.id === selectedModel) : false;
+
   const renderModelOption = (model: ModelInfo, isSelected: boolean) => (
     <button
       key={model.id}
-      onClick={() => handleModelSelect(model.id)}
-      className={`w-full text-left p-2.5 rounded-lg transition-all duration-200 group ${
-        isSelected
-          ? 'bg-gradient-to-r from-blue-500/30 to-blue-500/10 border border-blue-500/50 shadow-lg shadow-blue-500/10'
-          : 'hover:bg-white/5 border border-white/10 hover:border-white/20'
-      }`}
+      onClick={() => !disabled && handleModelSelect(model.id)}
+      disabled={disabled}
+      title={disabled ? lockedReason : undefined}
+      className={`w-full text-left p-3 rounded-sm transition-all duration-200 group border text-text-primary ${isSelected
+        ? 'bg-black text-white border-black'
+        : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300'
+        } ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
     >
-      <div className="flex items-start gap-2.5">
-        {/* Icon */}
-        <div className={`p-1.5 rounded-md ${
-          isSelected ? 'bg-blue-500/20' : 'bg-white/5 group-hover:bg-white/10'
-        }`}>
-          <span className="text-lg flex-shrink-0">{model.icon}</span>
-        </div>
-
-        {/* Content */}
+      <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-1">
-            <span className="font-sans font-bold text-white text-xs truncate">
+          <div className="flex items-center justify-between gap-2 mb-0.5">
+            <span className={`font-sans font-bold text-xs truncate ${isSelected ? 'text-white' : 'text-text-primary'}`}>
               {model.displayName}
             </span>
-            <span
-              className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${model.badgeColor}`}
-            >
-              {model.badge}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-[10px] font-mono ${isSelected ? 'text-gray-400' : 'text-text-secondary'}`}>
+              {model.provider}
             </span>
           </div>
-          <p className="font-sans text-[10px] text-gray-400 leading-tight mb-1 line-clamp-1">
-            {model.description}
-          </p>
-          <p className="font-mono text-[9px] text-gray-600">{model.provider}</p>
         </div>
       </div>
     </button>
   );
 
-  return (
-    <div className="relative flex flex-col h-full">
-      {/* Scrollable Cards Container */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-blue-900/50 scrollbar-track-transparent">
-        {/* FREE MODELS Section */}
-        <div className="mb-4">
-          <h3 className="sticky top-0 z-10 bg-black/95 backdrop-blur-xl px-2 py-2 mb-2 font-mono text-[10px] uppercase tracking-widest flex items-center gap-2 border-b border-blue-500/20">
-            <span className="flex-1 text-green-400">Free Models</span>
-            <span className="text-[8px] text-gray-500 normal-case bg-green-500/10 px-1.5 py-0.5 rounded">∞</span>
-          </h3>
-          <div className="space-y-2 px-1">
-            {FREE_MODELS.map(model => (
-              <motion.div
-                key={model.id}
-                layout
-                whileHover={{ scale: 1.02, y: -2 }}
-                transition={{ duration: 0.2 }}
-              >
-                {renderModelOption(model, selectedModel === model.id)}
-              </motion.div>
-            ))}
+  const renderCategoryButton = (
+    type: 'free' | 'paid',
+    title: string,
+    subtitle: string,
+    isSelected: boolean,
+    models: readonly ModelInfo[]
+  ) => {
+    const currentModelName = isSelected ? models.find(m => m.id === selectedModel)?.displayName : null;
+
+    return (
+      <button
+        onClick={() => !disabled && setActiveCategory(type)}
+        disabled={disabled}
+        title={disabled ? lockedReason : undefined}
+        className={`w-full group relative rounded-sm border transition-all duration-200 p-4 text-left ${isSelected
+          ? 'bg-white border-black shadow-sm'
+          : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+          } ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
+      >
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between w-full">
+            <span className="font-mono text-xs uppercase tracking-widest font-bold text-text-primary">
+              {title}
+            </span>
+            {isSelected && (
+              <div className="w-2 h-2 rounded-full bg-accent" />
+            )}
           </div>
+
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-[10px] text-text-secondary">{subtitle}</span>
+            <span className="text-[10px] font-mono text-text-secondary bg-gray-100 px-1.5 py-0.5 rounded-sm">
+              {models.length}
+            </span>
+          </div>
+
+          {isSelected && currentModelName && (
+            <div className="mt-2 pt-2 border-t border-gray-100 text-[10px] text-text-primary font-medium truncate">
+              {currentModelName}
+            </div>
+          )}
         </div>
 
-        {/* PAID MODELS Section */}
-        <div>
-          <h3 className="sticky top-0 z-10 bg-black/95 backdrop-blur-xl px-2 py-2 mb-2 font-mono text-[10px] uppercase tracking-widest flex items-center gap-2 border-b border-blue-500/20">
-            <span className="flex-1 text-yellow-400">Premium</span>
-            <span className="text-[8px] text-gray-500 normal-case bg-yellow-500/10 px-1.5 py-0.5 rounded">1.5x</span>
-          </h3>
-          <div className="space-y-2 px-1">
-            {PAID_MODELS.map(model => (
-              <motion.div
-                key={model.id}
-                layout
-                whileHover={{ scale: 1.02, y: -2 }}
-                transition={{ duration: 0.2 }}
-              >
-                {renderModelOption(model, selectedModel === model.id)}
-              </motion.div>
-            ))}
-          </div>
-        </div>
+        {!isSelected && (
+          <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" size={16} />
+        )}
+      </button>
+    );
+  };
+
+  const renderModelList = (models: readonly ModelInfo[], title: string) => (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center gap-2 mb-4">
+        <button
+          onClick={() => setActiveCategory(null)}
+          className="p-1 rounded-sm hover:bg-gray-200 text-text-secondary hover:text-text-primary transition-colors"
+        >
+          <ChevronLeft size={16} />
+        </button>
+        <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-text-primary">
+          {title}
+        </h3>
       </div>
 
-      {/* Disabled State Overlay */}
-      {disabled && (
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm rounded-lg flex flex-col items-center justify-center gap-3 z-20">
-          <div className="p-4 bg-gray-800/50 rounded-full">
-            <Lock size={24} className="text-gray-400" />
-          </div>
-          <div className="text-center px-4">
-            <p className="font-sans text-sm text-white font-semibold mb-1">Model Locked</p>
-            <p className="font-mono text-xs text-gray-400">{lockedReason}</p>
-          </div>
-        </div>
-      )}
+      <div className="flex-1 overflow-y-auto space-y-1 pr-1">
+        {models.map(model => renderModelOption(model, selectedModel === model.id))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="relative flex flex-col h-full">
+      <AnimatePresence mode="wait" initial={false}>
+        {!activeCategory ? (
+          <motion.div
+            key="categories"
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.2 }}
+            className="flex flex-col gap-3 h-full overflow-y-auto pt-1"
+          >
+            {renderCategoryButton('free', 'Gratuito', 'Uso ilimitado', isFreeSelected, FREE_MODELS)}
+            {renderCategoryButton('paid', 'Premium', 'Alta performance', isPaidSelected, PAID_MODELS)}
+
+            {onMediaClick && (
+              <button
+                onClick={onMediaClick}
+                className="w-full group relative rounded-sm border border-gray-200 bg-gray-50 hover:bg-white hover:border-gray-300 transition-all p-4 text-left"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs uppercase tracking-widest font-bold text-text-primary">
+                    Canvas
+                  </span>
+                  <Palette size={14} className="text-text-secondary" />
+                </div>
+                <div className="text-[10px] text-text-secondary mt-1">
+                  Gerar Mídia
+                </div>
+              </button>
+            )}
+
+          </motion.div>
+        ) : (
+          <motion.div
+            key="list"
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 10 }}
+            transition={{ duration: 0.2 }}
+            className="h-full"
+          >
+            {activeCategory === 'free'
+              ? renderModelList(FREE_MODELS, 'Modelos Gratuitos')
+              : renderModelList(PAID_MODELS, 'Premium')
+            }
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

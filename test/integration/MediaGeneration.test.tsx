@@ -31,60 +31,33 @@ describe('Media Generation Integration Tests', () => {
     vi.mocked(apiClient.generateVideo).mockResolvedValue('https://example.com/generated-video.mp4');
   });
 
-  describe('NENECA Agent Configuration', () => {
-    it('should show MediaCanvas when NENECA agent is selected', async () => {
+  describe('Media Canvas Access', () => {
+    it('should show MediaCanvas when Canvas de Mídia button is clicked', async () => {
       const user = userEvent.setup();
       render(<ChatInterface currentUser={mockUser} onBack={mockOnBack} />);
 
-      // Select NENECA agent (agent 04)
-      const nenecaButton = screen.getByTitle('NENECA');
-      await user.click(nenecaButton);
+      // Click Canvas button in sidebar
+      const canvasButton = screen.getByText(/canvas/i);
+      await user.click(canvasButton);
 
-      // Should show MediaCanvas with NENECA Canvas heading
+      // Should show MediaCanvas with FIDI.ai Canvas heading
       await waitFor(() => {
-        expect(screen.getByText('NENECA Canvas')).toBeInTheDocument();
+        expect(screen.getByText('FIDI.ai Canvas')).toBeInTheDocument();
       });
     });
 
-    it('should have NENECA agent available', () => {
+    it('should have Canvas button in sidebar', () => {
       render(<ChatInterface currentUser={mockUser} onBack={mockOnBack} />);
 
-      const nenecaButton = screen.getByTitle('NENECA');
-      expect(nenecaButton).toBeInTheDocument();
-    });
-  });
-
-  // Note: ReactFlow uses d3-drag which requires browser APIs not available in jsdom
-  // These interaction tests are skipped as they require a real browser environment
-  describe('Media Generation Workflow', () => {
-    it.skip('should allow typing media generation prompts', async () => {
-      const user = userEvent.setup();
-      render(<ChatInterface currentUser={mockUser} onBack={mockOnBack} />);
-
-      const nenecaButton = screen.getByTitle('NENECA');
-      await user.click(nenecaButton);
-
-      const textarea = (await screen.findByPlaceholderText(
-        /describe the image/i
-      )) as HTMLTextAreaElement;
-
-      await user.type(textarea, 'A futuristic city at night');
-
-      expect(textarea.value).toBe('A futuristic city at night');
+      const canvasButton = screen.getByText(/canvas/i);
+      expect(canvasButton).toBeInTheDocument();
     });
 
-    it.skip('should have generate button enabled with text input', async () => {
-      const user = userEvent.setup();
+    it('should show Canvas description', () => {
       render(<ChatInterface currentUser={mockUser} onBack={mockOnBack} />);
 
-      const nenecaButton = screen.getByTitle('NENECA');
-      await user.click(nenecaButton);
-
-      const textarea = await screen.findByPlaceholderText(/describe the image/i);
-      await user.type(textarea, 'A mountain landscape');
-
-      const generateButton = screen.getByRole('button', { name: /generate/i });
-      expect(generateButton).not.toBeDisabled();
+      const description = screen.getByText(/gerar mídia/i);
+      expect(description).toBeInTheDocument();
     });
   });
 
@@ -150,13 +123,13 @@ describe('Media Generation Integration Tests', () => {
     });
   });
 
-  describe('Agent-Specific Behavior', () => {
-    it('should show different placeholder for non-NENECA agents', async () => {
+  describe('Chat Interface', () => {
+    it('should show standard placeholder in chat', async () => {
       render(<ChatInterface currentUser={mockUser} onBack={mockOnBack} />);
 
-      // FIDI is the default agent, should show standard placeholder
+      // Should show standard placeholder
       await waitFor(() => {
-        expect(screen.getByPlaceholderText(/digite seu comando/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/enviar mensagem para fidi/i)).toBeInTheDocument();
       });
     });
   });

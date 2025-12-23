@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@theme {
+    --color-page: #EEEEEE;
+    --color-text-primary: #020202;
+    --color-text-secondary: #4D4947;
+    --color-accent: #FF5C00;
+
+    --font-sans: "Geist", "Inter", sans-serif;
+    --font-mono: "Geist Mono", "JetBrains Mono", monospace;
+
+    --radius-sm: 2px;
+    --radius-window: 12px;
+}
+
+@layer base {
+    body {
+        /* Manually applying styles if @apply fails or just use standard CSS for body */
+        background-color: var(--color-page);
+        color: var(--color-text-primary);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}

@@ -1,95 +1,51 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React from 'react';
 import { Stat } from '../types';
+import { Reveal } from './Reveal';
 
 const stats: Stat[] = [
-  { id: '1', value: 98, suffix: '%', label: 'Taxa de Precisão' },
-  { id: '2', value: 450, suffix: 'M+', label: 'Pontos de Dados' },
-  { id: '3', value: 24, suffix: '/7', label: 'Disponibilidade' },
-  { id: '4', value: 12, suffix: 'ms', label: 'Latência' },
+  { id: '1', value: 1.5, suffix: 'x', label: 'Eficácia de Token' },
+  { id: '2', value: 20, suffix: '', label: 'Modelos Integrados' },
+  { id: '3', value: 100, suffix: '%', label: 'Disponibilidade' },
 ];
-
-const Counter: React.FC<{ end: number; suffix: string; duration?: number }> = ({ end, suffix, duration = 2000 }) => {
-  const [count, setCount] = useState(0);
-  const ref = useRef<HTMLDivElement>(null);
-  const [hasAnimated, setHasAnimated] = useState(false);
-
-  useEffect(() => {
-    let timer: ReturnType<typeof setInterval> | null = null;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !hasAnimated) {
-          setHasAnimated(true);
-          let start = 0;
-          const increment = end / (duration / 16); // 60fps
-
-          timer = setInterval(() => {
-            start += increment;
-            if (start >= end) {
-              setCount(end);
-              if (timer) clearInterval(timer);
-            } else {
-              setCount(Math.floor(start));
-            }
-          }, 16);
-        }
-      },
-      { threshold: 0.5 }
-    );
-
-    if (ref.current) observer.observe(ref.current);
-    return () => {
-      observer.disconnect();
-      if (timer) clearInterval(timer);
-    };
-  }, [end, duration, hasAnimated]);
-
-  return (
-    <div ref={ref} className="flex items-baseline">
-      <span className="font-display font-bold text-5xl md:text-7xl lg:text-8xl text-white tracking-tighter">
-        {count}
-      </span>
-      <span className="font-display text-3xl md:text-4xl text-blue-500 ml-1">{suffix}</span>
-    </div>
-  );
-};
 
 export const TrustSignals: React.FC = () => {
   return (
-    <section id="trust" className="py-20 md:py-24 px-6 md:px-12 bg-transparent relative overflow-hidden">
-      {/* Subtle Grid Background */}
-      <div 
-        className="absolute inset-0 opacity-10 pointer-events-none"
-        style={{
-           backgroundImage: 'linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px)',
-           backgroundSize: '40px 40px'
-        }}
-      />
-
-      <div className="container mx-auto max-w-7xl relative z-10">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-16 lg:gap-24">
-          {stats.map((stat) => (
-            <div key={stat.id} className="flex flex-col">
-              <div className="h-px w-full bg-gradient-to-r from-blue-500 to-transparent mb-6 md:mb-8 opacity-30" />
-              <Counter end={stat.value} suffix={stat.suffix} />
-              <p className="font-mono text-xs md:text-sm text-blue-400 mt-2 md:mt-4 uppercase tracking-widest">
-                {stat.label}
-              </p>
-            </div>
+    <section id="trust" className="py-24 px-6 md:px-12 bg-page text-text-primary border-t border-gray-300">
+      <div className="container mx-auto max-w-7xl">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
+          {stats.map((stat, index) => (
+            <Reveal key={stat.id} delay={index * 0.1} width="100%">
+              <div className="flex flex-col items-center">
+                <div className="flex items-baseline mb-2 justify-center">
+                  <span className="font-sans font-medium text-6xl tracking-tighter text-text-primary">
+                    {stat.value}
+                  </span>
+                  <span className="font-sans text-3xl text-text-secondary ml-1">{stat.suffix}</span>
+                </div>
+                <p className="font-mono text-xs text-text-secondary uppercase tracking-widest">
+                  {stat.label}
+                </p>
+              </div>
+            </Reveal>
           ))}
         </div>
 
-        <div className="mt-24 md:mt-32 relative">
-          <div className="absolute -top-8 md:-top-12 left-0 font-display text-8xl md:text-9xl text-blue-500 opacity-10 select-none pointer-events-none">
-            "
-          </div>
-          <blockquote className="font-sans text-2xl md:text-4xl lg:text-5xl font-light text-center leading-tight max-w-5xl mx-auto text-white">
-            <span className="text-blue-400">A FIDI.ai é sensacional.</span> Me impressionei com a precisão e criatividade dos agentes.
-          </blockquote>
-          <div className="mt-10 md:mt-12 text-center">
-            <p className="font-display font-bold text-white text-lg">Lucas Nery</p>
-            <p className="font-mono text-blue-500 text-xs md:text-sm">CEO, Pórtico Imobiliária</p>
-          </div>
+        <div className="mt-32 text-center">
+          <Reveal width="100%">
+            <div className="max-w-4xl mx-auto">
+              <p className="font-mono text-xs text-text-secondary mb-6 uppercase tracking-widest">Feedback do Sistema</p>
+              <blockquote className="font-sans text-3xl md:text-5xl font-medium leading-tight text-text-primary mb-8">
+                "A FIDI.ai redefine a interação com agentes. Precisão industrial para problemas complexos."
+              </blockquote>
+              <div className="flex items-center justify-center gap-4">
+                <div className="w-10 h-10 bg-gray-300 rounded-sm"></div>
+                <div className="text-left">
+                  <p className="font-sans font-bold text-sm text-text-primary">Lucas Nery</p>
+                  <p className="font-mono text-xs text-text-secondary">CEO, Pórtico Real Estate</p>
+                </div>
+              </div>
+            </div>
+          </Reveal>
         </div>
       </div>
     </section>

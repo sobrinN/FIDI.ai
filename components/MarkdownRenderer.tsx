@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { Copy, Check } from 'lucide-react';
 import type { CSSProperties } from 'react';
 
@@ -107,7 +107,7 @@ interface MarkdownRendererProps {
  * - Security: skips HTML and disallows dangerous elements
  * - Fallback display while loading
  */
-export const MarkdownRenderer = ({ content, className = '' }: MarkdownRendererProps) => {
+export const MarkdownRenderer = React.memo(({ content, className = '' }: MarkdownRendererProps) => {
   return (
     <Suspense fallback={<div className={className}>{content}</div>}>
       <div className={className}>
@@ -138,4 +138,6 @@ export const MarkdownRenderer = ({ content, className = '' }: MarkdownRendererPr
       </div>
     </Suspense>
   );
-};
+});
+
+MarkdownRenderer.displayName = 'MarkdownRenderer';

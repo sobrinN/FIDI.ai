@@ -21,9 +21,12 @@ export interface User {
   readonly id: string;
   readonly name: string;
   readonly email: string;
-  readonly tokenBalance?: number;
-  readonly tokenUsageThisMonth?: number;
+  readonly creditBalance?: number;
+  readonly creditUsageThisMonth?: number;
   readonly daysUntilReset?: number;
+  readonly plan?: 'free' | 'pro';
+  readonly monthlyAllowance?: number;
+  readonly planRenewDate?: number;
 }
 
 export interface Attachment {
@@ -54,7 +57,6 @@ export interface Conversation {
   readonly title: string;
   readonly messages: readonly Message[];
   readonly lastModified: number;
-  readonly agentId?: string; // Tracks which agent (01, 02, 03, 04) owns this chat
   readonly modelId?: string; // Tracks which model is used (locked after first message)
   readonly createdAt?: number; // Unix timestamp (optional for backwards compatibility)
   readonly updatedAt?: number; // Unix timestamp (optional for backwards compatibility)

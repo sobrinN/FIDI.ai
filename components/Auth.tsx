@@ -149,35 +149,39 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-transparent">
-      {/* Background Ambience - Subtle Blue Glow */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-blue-500/5 rounded-full blur-[100px]" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-blue-500/5 rounded-full blur-[100px]" />
-      </div>
-
+    <div className="min-h-screen flex items-center justify-center p-6 bg-page selection:bg-accent selection:text-white">
       <div className="absolute top-8 left-8 z-50">
         <button
           onClick={onBack}
-          className="text-blue-500 hover:text-white font-mono text-xs tracking-widest flex items-center gap-2 transition-colors"
+          className="text-text-secondary hover:text-text-primary font-mono text-xs tracking-widest flex items-center gap-2 transition-colors group"
         >
-          &larr; BACK
+          <span className="group-hover:-translate-x-1 transition-transform">&larr;</span> BACK
         </button>
       </div>
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         className="w-full max-w-md relative z-10"
       >
-        <div className="glass-panel p-8 md:p-10 rounded-2xl border border-blue-500/20 shadow-2xl relative overflow-hidden bg-black/80 backdrop-blur-md">
+        <div className="p-8 md:p-12 border border-gray-300 bg-white shadow-sm relative">
 
-          <div className="text-center mb-8">
-            <h2 className="font-display font-bold text-3xl md:text-4xl tracking-tighter mb-2 text-white">
-              {isLogin ? 'IDENTIFICATION' : 'NEW PROTOCOL'}
+          {/* Decorative Corner Accents */}
+          <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-accent"></div>
+          <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-gray-300"></div>
+          <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-gray-300"></div>
+          <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-accent"></div>
+
+          <div className="text-center mb-10">
+            <div className="inline-block mb-4 px-2 py-0.5 border border-gray-200 rounded-sm">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-text-secondary">System Access</span>
+            </div>
+            <h2 className="font-display font-medium text-3xl tracking-tight mb-2 text-text-primary uppercase">
+              {isLogin ? 'Identification' : 'Protocol Init'}
             </h2>
-            <p className="text-blue-300 text-sm font-sans">
-              {isLogin ? 'Enter your credentials to access.' : 'Start your registration.'}
+            <p className="text-text-secondary text-sm font-sans">
+              {isLogin ? 'Enter your credentials to access.' : 'Initialize your registration sequence.'}
             </p>
           </div>
 
@@ -188,17 +192,17 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="space-y-2"
+                  className="space-y-2 overflow-hidden"
                 >
-                  <label className="text-xs font-mono text-blue-400 uppercase tracking-wider">Operator Name</label>
+                  <label className="text-[10px] font-mono text-text-secondary uppercase tracking-wider pl-1">Operator Name</label>
                   <div className="relative group">
-                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500 group-focus-within:text-white transition-colors" size={18} />
+                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-accent transition-colors" size={16} />
                     <input
                       type="text"
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
-                      className="w-full bg-blue-900/10 border border-blue-500/20 rounded-lg py-3 pl-10 pr-4 text-white placeholder-blue-400/50 focus:outline-none focus:border-blue-400 focus:bg-blue-900/20 transition-all font-sans"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-sm py-3 pl-10 pr-4 text-text-primary placeholder-gray-400 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all font-sans text-sm"
                       placeholder="Identification..."
                     />
                   </div>
@@ -207,15 +211,15 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
             </AnimatePresence>
 
             <div className="space-y-2">
-              <label className="text-xs font-mono text-blue-400 uppercase tracking-wider">Email</label>
+              <label className="text-[10px] font-mono text-text-secondary uppercase tracking-wider pl-1">Email Coordinates</label>
               <div className="relative group">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500 group-focus-within:text-white transition-colors" size={18} />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-accent transition-colors" size={16} />
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full bg-blue-900/10 border border-blue-500/20 rounded-lg py-3 pl-10 pr-4 text-white placeholder-blue-400/50 focus:outline-none focus:border-blue-400 focus:bg-blue-900/20 transition-all font-sans"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-sm py-3 pl-10 pr-4 text-text-primary placeholder-gray-400 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all font-sans text-sm"
                   placeholder="user@network.com"
                   required
                 />
@@ -223,15 +227,15 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-mono text-blue-400 uppercase tracking-wider">Access Key</label>
+              <label className="text-[10px] font-mono text-text-secondary uppercase tracking-wider pl-1">Security Key</label>
               <div className="relative group">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500 group-focus-within:text-white transition-colors" size={18} />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-accent transition-colors" size={16} />
                 <input
                   type="password"
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full bg-blue-900/10 border border-blue-500/20 rounded-lg py-3 pl-10 pr-4 text-white placeholder-blue-400/50 focus:outline-none focus:border-blue-400 focus:bg-blue-900/20 transition-all font-sans"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-sm py-3 pl-10 pr-4 text-text-primary placeholder-gray-400 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all font-sans text-sm"
                   placeholder="********"
                   required
                 />
@@ -242,10 +246,10 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2 text-red-300 text-sm bg-red-900/10 p-3 rounded-lg border border-red-500/20"
+                className="flex items-center gap-3 text-red-600 text-xs bg-red-50 p-3 border-l-2 border-red-500"
               >
-                <AlertCircle size={16} />
-                <span>{error}</span>
+                <AlertCircle size={14} />
+                <span className="font-mono">{error}</span>
               </motion.div>
             )}
 
@@ -253,31 +257,42 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onBack }) => {
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2 text-blue-200 text-sm bg-blue-900/20 p-3 rounded-lg border border-blue-500/20"
+                className="flex items-center gap-3 text-green-700 text-xs bg-green-50 p-3 border-l-2 border-green-500"
               >
-                <CheckCircle size={16} />
-                <span>{success}</span>
+                <CheckCircle size={14} />
+                <span className="font-mono">{success}</span>
               </motion.div>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-white text-black font-display font-bold text-lg py-3 rounded-lg hover:bg-blue-50 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group relative overflow-hidden"
+              className="w-full bg-text-primary text-white font-mono text-xs uppercase tracking-widest py-4 hover:bg-black transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed group relative overflow-hidden"
             >
+              <div className="absolute inset-0 bg-accent scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500 ease-out z-0"></div>
               <span className="relative z-10 flex items-center gap-2">
-                {loading ? 'PROCESSING...' : (isLogin ? 'START SESSION' : 'REGISTER')}
-                {!loading && <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />}
+                {loading ? 'PROCESSING...' : (isLogin ? 'INITIATE SESSION' : 'REGISTER ID')}
+                {!loading && <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />}
               </span>
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-8 text-center border-t border-gray-100 pt-6">
             <button
               onClick={() => { setIsLogin(!isLogin); setError(''); setSuccess(''); }}
-              className="text-sm text-blue-400 hover:text-white transition-colors font-mono underline decoration-blue-500/50 hover:decoration-white underline-offset-4"
+              className="text-xs text-text-secondary hover:text-accent transition-colors font-mono uppercase tracking-wide group"
             >
-              {isLogin ? 'Request new access credential' : 'Already have access? Connect'}
+              {isLogin ? (
+                <>
+                  <span className="opacity-50 mr-2">[ALT]</span>
+                  <span className="group-hover:underline underline-offset-4">Request Access</span>
+                </>
+              ) : (
+                <>
+                  <span className="opacity-50 mr-2">[ESC]</span>
+                  <span className="group-hover:underline underline-offset-4">Connect Existing ID</span>
+                </>
+              )}
             </button>
           </div>
         </div>

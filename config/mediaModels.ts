@@ -20,68 +20,102 @@ export interface VideoModel extends Omit<MediaModel, 'supportsResolutions'> {
     supportsDurations: ('5s' | '10s')[];
 }
 
-// Image generation models - Official Replicate models only
+// Image generation models - Official Replicate models from api-manipulator skill
 export const IMAGE_MODELS: MediaModel[] = [
     {
-        id: 'black-forest-labs/flux-schnell',
-        name: 'FLUX Schnell',
-        provider: 'Black Forest Labs',
-        badge: 'FAST',
-        badgeColor: 'bg-green-500/20 text-green-400',
-        description: 'Ultra-fast generation with great quality',
-        supportsResolutions: ['720p', '1080p'],
-        supportsAspectRatios: ['16:9', '4:3', '4:5', '1:1', '9:16'],
-        pricing: '~$0.003'
-    },
-    {
-        id: 'stability-ai/stable-diffusion-3.5-large-turbo',
-        name: 'SD 3.5 Large Turbo',
-        provider: 'Stability AI',
-        badge: 'FAST',
-        badgeColor: 'bg-blue-500/20 text-blue-400',
-        description: 'High quality with excellent prompt adherence',
-        supportsResolutions: ['720p', '1080p'],
-        supportsAspectRatios: ['16:9', '4:3', '4:5', '1:1', '9:16'],
-        pricing: '~$0.04'
-    },
-    {
-        id: 'black-forest-labs/flux-1.1-pro',
-        name: 'FLUX 1.1 Pro',
+        id: 'black-forest-labs/flux-2-pro',
+        name: 'FLUX 2 Pro',
         provider: 'Black Forest Labs',
         badge: 'PRO',
         badgeColor: 'bg-purple-500/20 text-purple-400',
-        description: 'Best quality, excellent prompt adherence & diversity',
+        description: 'Highest quality with advanced prompt understanding',
+        supportsResolutions: ['720p', '1080p'],
+        supportsAspectRatios: ['16:9', '4:3', '4:5', '1:1', '9:16'],
+        pricing: 'Premium'
+    },
+    {
+        id: 'black-forest-labs/flux-2-dev',
+        name: 'FLUX 2 Dev',
+        provider: 'Black Forest Labs',
+        badge: 'FAST',
+        badgeColor: 'bg-green-500/20 text-green-400',
+        description: 'Fast generation optimized for speed and quality',
+        supportsResolutions: ['720p', '1080p'],
+        supportsAspectRatios: ['16:9', '4:3', '4:5', '1:1', '9:16'],
+        pricing: 'Fast'
+    },
+    {
+        id: 'qwen/qwen-image',
+        name: 'Qwen Image',
+        provider: 'Qwen',
+        badge: 'PRO',
+        badgeColor: 'bg-blue-500/20 text-blue-400',
+        description: 'Strong prompt understanding with Chinese support',
+        supportsResolutions: ['720p', '1080p'],
+        supportsAspectRatios: ['16:9', '4:3', '4:5', '1:1', '9:16'],
+        pricing: 'Standard'
+    },
+    {
+        id: 'qwen/qwen-image-edit-plus',
+        name: 'Qwen Edit Plus',
+        provider: 'Qwen',
+        badge: 'PRO',
+        badgeColor: 'bg-orange-500/20 text-orange-400',
+        description: 'Advanced image editing and manipulation',
+        supportsResolutions: ['720p', '1080p'],
+        supportsAspectRatios: ['16:9', '4:3', '4:5', '1:1', '9:16'],
+        pricing: 'Standard'
+    },
+    {
+        id: 'bytedance/seedream-4.5',
+        name: 'Seedream 4.5',
+        provider: 'Bytedance',
+        badge: 'PRO',
+        badgeColor: 'bg-pink-500/20 text-pink-400',
+        description: 'High-fidelity generation up to 4K resolution',
         supportsResolutions: ['720p', '1080p', '4k'],
         supportsAspectRatios: ['16:9', '4:3', '4:5', '1:1', '9:16'],
-        pricing: '~$0.04'
+        pricing: 'Premium'
     }
 ];
 
-// Video generation models
+// Video generation models - Official Replicate models from api-manipulator skill
 export const VIDEO_MODELS: VideoModel[] = [
     {
-        id: 'wan-video/wan-2.2-t2v-fast',
-        name: 'Wan 2.2 Fast',
-        provider: 'PrunaAI',
-        badge: 'FAST',
-        badgeColor: 'bg-green-500/20 text-green-400',
-        description: 'Fast, affordable text-to-video generation',
+        id: 'wan-video/wan-2.2-animate-replace',
+        name: 'WAN Animate Replace',
+        provider: 'WAN Video',
+        badge: 'PRO',
+        badgeColor: 'bg-purple-500/20 text-purple-400',
+        description: 'Replace characters in existing videos with new subjects',
         supportsResolutions: ['720p', '1080p'],
         supportsAspectRatios: ['16:9', '4:3', '1:1'],
         supportsDurations: ['5s'],
-        pricing: 'LOW'
+        pricing: 'Standard'
     },
     {
-        id: 'kwaivgi/kling-v1.6-pro',
-        name: 'Kling v1.6 Pro',
-        provider: 'Kuaishou',
-        badge: 'PRO',
-        badgeColor: 'bg-purple-500/20 text-purple-400',
-        description: 'Professional 5s/10s videos at 1080p',
-        supportsResolutions: ['1080p'],
+        id: 'wan-video/wan-2.2-i2v-fast',
+        name: 'WAN i2v Fast',
+        provider: 'WAN Video',
+        badge: 'FAST',
+        badgeColor: 'bg-green-500/20 text-green-400',
+        description: 'Fast image-to-video with motion description',
+        supportsResolutions: ['720p', '1080p'],
+        supportsAspectRatios: ['16:9', '4:3', '1:1'],
+        supportsDurations: ['5s'],
+        pricing: 'Fast'
+    },
+    {
+        id: 'minimax/hailuo-02-fast',
+        name: 'Hailuo 02 Fast',
+        provider: 'MiniMax',
+        badge: 'FAST',
+        badgeColor: 'bg-blue-500/20 text-blue-400',
+        description: 'Motion-guided video from static frames',
+        supportsResolutions: ['720p', '1080p'],
         supportsAspectRatios: ['16:9', '9:16', '1:1'],
-        supportsDurations: ['5s', '10s'],
-        pricing: '~$0.25-$0.50'
+        supportsDurations: ['5s'],
+        pricing: 'Fast'
     }
 ];
 
@@ -115,10 +149,10 @@ export const getVideoModelById = (id: string): VideoModel | undefined =>
     VIDEO_MODELS.find(m => m.id === id);
 
 export const getDefaultImageModel = (): MediaModel =>
-    IMAGE_MODELS.find(m => m.id === 'black-forest-labs/flux-1.1-pro') || IMAGE_MODELS[0];
+    IMAGE_MODELS.find(m => m.id === 'black-forest-labs/flux-2-dev') || IMAGE_MODELS[0];
 
 export const getDefaultVideoModel = (): VideoModel =>
-    VIDEO_MODELS.find(m => m.id === 'wan-video/wan-2.2-t2v-fast') || VIDEO_MODELS[0];
+    VIDEO_MODELS.find(m => m.id === 'wan-video/wan-2.2-i2v-fast') || VIDEO_MODELS[0];
 
 // Check if a model supports a specific aspect ratio
 export const modelSupportsAspectRatio = (

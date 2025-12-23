@@ -39,10 +39,6 @@ export const RETRY = {
   BACKOFF_MULTIPLIER: 2,               // Exponential backoff multiplier
 } as const;
 
-// Agent IDs (type-safe)
-export const AGENT_IDS = ['01', '02', '03', '04'] as const;
-export type AgentId = typeof AGENT_IDS[number];
-
 // View Types (type-safe)
-export const VIEWS = ['landing', 'auth', 'chat', 'agents'] as const;
+export const VIEWS = ['landing', 'auth', 'chat'] as const;
 export type ViewType = typeof VIEWS[number];

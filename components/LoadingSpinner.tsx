@@ -3,12 +3,25 @@ import { Loader2 } from 'lucide-react';
 
 export const LoadingSpinner: React.FC = () => {
   return (
-    <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
-      <div className="text-center">
-        <Loader2 className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
-        <p className="text-blue-400 font-mono text-sm animate-pulse">
-          Carregando...
-        </p>
+    <div className="fixed inset-0 bg-page flex items-center justify-center z-50">
+      <div className="flex flex-col items-center gap-4">
+        <div className="relative w-16 h-16 flex items-center justify-center">
+          {/* Industrial Spinner */}
+          <div className="absolute inset-0 border-4 border-gray-300 rounded-full"></div>
+          <div className="absolute inset-0 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+          {/* Center Dot */}
+          <div className="w-2 h-2 bg-text-primary rounded-sm"></div>
+        </div>
+
+        <div className="flex flex-col items-center gap-1">
+          <p className="text-text-primary font-sans font-bold text-lg tracking-tight uppercase">
+            Carregando
+          </p>
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse"></span>
+            <span className="text-text-secondary font-mono text-xs tracking-widest">SYSTEM_INIT</span>
+          </div>
+        </div>
       </div>
     </div>
   );

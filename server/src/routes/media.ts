@@ -2,28 +2,31 @@ import { Router } from 'express';
 import { APIError } from '../middleware/errorHandler.js';
 import { AuthRequest } from '../middleware/auth.js';
 import { checkTokenQuota } from '../middleware/tokenQuota.js';
-import { deductTokens, TOKEN_COSTS } from '../lib/tokenService.js';
+import { deductTokens, CREDIT_COSTS } from '../lib/tokenService.js';
 
 export const mediaRouter = Router();
 
 const REPLICATE_API_BASE = 'https://api.replicate.com/v1';
 
 // Allowed models and defaults for media generation
-// Only official Replicate models - these work with /models/{owner}/{model}/predictions endpoint
+// Official Replicate models from api-manipulator skill
 const IMAGE_MODELS = {
-  default: 'black-forest-labs/flux-1.1-pro',
+  default: 'black-forest-labs/flux-2-dev',
   allowed: [
-    'black-forest-labs/flux-1.1-pro',
-    'black-forest-labs/flux-schnell',
-    'stability-ai/stable-diffusion-3.5-large-turbo'
+    'black-forest-labs/flux-2-pro',
+    'black-forest-labs/flux-2-dev',
+    'qwen/qwen-image',
+    'qwen/qwen-image-edit-plus',
+    'bytedance/seedream-4.5'
   ]
 };
 
 const VIDEO_MODELS = {
-  default: 'wan-video/wan-2.2-t2v-fast',
+  default: 'wan-video/wan-2.2-i2v-fast',
   allowed: [
-    'wan-video/wan-2.2-t2v-fast',
-    'kwaivgi/kling-v1.6-pro'
+    'wan-video/wan-2.2-animate-replace',
+    'wan-video/wan-2.2-i2v-fast',
+    'minimax/hailuo-02-fast'
   ]
 };
 
@@ -117,7 +120,7 @@ async function pollPrediction(getUrl: string, apiKey: string): Promise<Replicate
   throw new APIError('Prediction timed out after 2 minutes', 408, 'TIMEOUT');
 }
 
-mediaRouter.post('/image', checkTokenQuota(TOKEN_COSTS.IMAGE_GENERATION), async (req: AuthRequest, res, next): Promise<void> => {
+mediaRouter.post('/image', checkTokenQuota(CREDIT_COSTS.IMAGE_GENERATION), async (req: AuthRequest, res, next): Promise<void> => {
   try {
     const { prompt, model, aspectRatio, resolution } = req.body;
 
@@ -197,21 +200,21 @@ mediaRouter.post('/image', checkTokenQuota(TOKEN_COSTS.IMAGE_GENERATION), async 
       throw new APIError('No image URL in prediction output', 500, 'NO_OUTPUT');
     }
 
-    // FIX: Wrap token deduction in try-catch to handle partial failures
+    // FIX: Wrap credit deduction in try-catch to handle partial failures
     // If deduction fails, user still gets their image but with a warning
     try {
       const deductionResult = await deductTokens(
         req.user.id,
-        TOKEN_COSTS.IMAGE_GENERATION,
-        'Image generation'
+        CREDIT_COSTS.IMAGE_GENERATION,
+        'Geração de imagem'
       );
 
       if (!deductionResult.success) {
-        console.error('[Media] Token deduction failed but image was generated:', deductionResult.error);
+        console.error('[Media] Credit deduction failed but image was generated:', deductionResult.error);
         res.json({
           url: imageUrl,
-          warning: 'Image generated successfully but token deduction failed. Please contact support.',
-          tokensUsed: TOKEN_COSTS.IMAGE_GENERATION,
+          warning: 'Imagem gerada com sucesso, mas falha ao deduzir créditos. Entre em contato com o suporte.',
+          creditsUsed: CREDIT_COSTS.IMAGE_GENERATION,
           deductionFailed: true
         });
         return;
@@ -219,17 +222,17 @@ mediaRouter.post('/image', checkTokenQuota(TOKEN_COSTS.IMAGE_GENERATION), async 
 
       res.json({
         url: imageUrl,
-        tokensUsed: TOKEN_COSTS.IMAGE_GENERATION,
+        creditsUsed: CREDIT_COSTS.IMAGE_GENERATION,
         newBalance: deductionResult.newBalance
       });
     } catch (deductError) {
       // Log error but still return the image
-      console.error('[Media] Token deduction exception but image was generated:', deductError);
+      console.error('[Media] Credit deduction exception but image was generated:', deductError);
 
       res.json({
         url: imageUrl,
-        warning: 'Image generated successfully but token deduction failed. Please contact support.',
-        tokensUsed: TOKEN_COSTS.IMAGE_GENERATION,
+        warning: 'Imagem gerada com sucesso, mas falha ao deduzir créditos. Entre em contato com o suporte.',
+        creditsUsed: CREDIT_COSTS.IMAGE_GENERATION,
         deductionFailed: true
       });
     }
@@ -238,7 +241,7 @@ mediaRouter.post('/image', checkTokenQuota(TOKEN_COSTS.IMAGE_GENERATION), async 
   }
 });
 
-mediaRouter.post('/video', checkTokenQuota(TOKEN_COSTS.VIDEO_GENERATION), async (req: AuthRequest, res, next): Promise<void> => {
+mediaRouter.post('/video', checkTokenQuota(CREDIT_COSTS.VIDEO_GENERATION), async (req: AuthRequest, res, next): Promise<void> => {
   try {
     const { prompt, model, aspectRatio, resolution, duration } = req.body;
 
@@ -327,21 +330,21 @@ mediaRouter.post('/video', checkTokenQuota(TOKEN_COSTS.VIDEO_GENERATION), async 
       throw new APIError('No video URL in prediction output', 500, 'NO_OUTPUT');
     }
 
-    // FIX: Wrap token deduction in try-catch to handle partial failures
+    // FIX: Wrap credit deduction in try-catch to handle partial failures
     // If deduction fails, user still gets their video but with a warning
     try {
       const deductionResult = await deductTokens(
         req.user.id,
-        TOKEN_COSTS.VIDEO_GENERATION,
-        'Video generation'
+        CREDIT_COSTS.VIDEO_GENERATION,
+        'Geração de vídeo'
       );
 
       if (!deductionResult.success) {
-        console.error('[Media] Token deduction failed but video was generated:', deductionResult.error);
+        console.error('[Media] Credit deduction failed but video was generated:', deductionResult.error);
         res.json({
           url: videoUrl,
-          warning: 'Video generated successfully but token deduction failed. Please contact support.',
-          tokensUsed: TOKEN_COSTS.VIDEO_GENERATION,
+          warning: 'Vídeo gerado com sucesso, mas falha ao deduzir créditos. Entre em contato com o suporte.',
+          creditsUsed: CREDIT_COSTS.VIDEO_GENERATION,
           deductionFailed: true
         });
         return;
@@ -349,17 +352,17 @@ mediaRouter.post('/video', checkTokenQuota(TOKEN_COSTS.VIDEO_GENERATION), async 
 
       res.json({
         url: videoUrl,
-        tokensUsed: TOKEN_COSTS.VIDEO_GENERATION,
+        creditsUsed: CREDIT_COSTS.VIDEO_GENERATION,
         newBalance: deductionResult.newBalance
       });
     } catch (deductError) {
       // Log error but still return the video
-      console.error('[Media] Token deduction exception but video was generated:', deductError);
+      console.error('[Media] Credit deduction exception but video was generated:', deductError);
 
       res.json({
         url: videoUrl,
-        warning: 'Video generated successfully but token deduction failed. Please contact support.',
-        tokensUsed: TOKEN_COSTS.VIDEO_GENERATION,
+        warning: 'Vídeo gerado com sucesso, mas falha ao deduzir créditos. Entre em contato com o suporte.',
+        creditsUsed: CREDIT_COSTS.VIDEO_GENERATION,
         deductionFailed: true
       });
     }

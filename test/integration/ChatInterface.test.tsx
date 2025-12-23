@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChatInterface } from '../../components/ChatInterface';
 import type { User } from '../../types';
@@ -47,40 +47,11 @@ describe('ChatInterface Integration Tests', () => {
       expect(backButton).toBeInTheDocument();
     });
 
-    it('should display agent options', () => {
+    it('should display model selector', () => {
       render(<ChatInterface currentUser={mockUser} onBack={mockOnBack} />);
 
-      // Check for agent icons/buttons - using title attributes
-      expect(screen.getByTitle('FIDI')).toBeInTheDocument();
-      expect(screen.getByTitle('TUNIN')).toBeInTheDocument();
-      expect(screen.getByTitle('MORCEGO')).toBeInTheDocument();
-      expect(screen.getByTitle('NENECA')).toBeInTheDocument();
-    });
-  });
-
-  describe('Agent Selection', () => {
-    it('should show current agent in header', () => {
-      render(<ChatInterface currentUser={mockUser} onBack={mockOnBack} />);
-
-      // Default agent should be FIDI (01)
-      // Look for FIDI text in the header area
-      const fidiElements = screen.getAllByText('FIDI');
-      expect(fidiElements.length).toBeGreaterThan(0);
-    });
-
-    it('should switch agents when clicked', async () => {
-      const user = userEvent.setup();
-      render(<ChatInterface currentUser={mockUser} onBack={mockOnBack} />);
-
-      // Click TUNIN agent button
-      const tuninButton = screen.getByTitle('TUNIN');
-      await user.click(tuninButton);
-
-      // Should now show TUNIN as active
-      await waitFor(() => {
-        const tuninElements = screen.getAllByText('TUNIN');
-        expect(tuninElements.length).toBeGreaterThan(0);
-      });
+      // Check for model selector section header
+      expect(screen.getByText('Modelo')).toBeInTheDocument();
     });
   });
 
@@ -98,8 +69,8 @@ describe('ChatInterface Integration Tests', () => {
     it('should have input field for messages', () => {
       render(<ChatInterface currentUser={mockUser} onBack={mockOnBack} />);
 
-      // Look for the message input
-      const input = screen.getByPlaceholderText(/digite seu comando/i);
+      // Look for the message input with new placeholder
+      const input = screen.getByPlaceholderText(/enviar mensagem para fidi/i);
       expect(input).toBeInTheDocument();
     });
 
@@ -107,7 +78,7 @@ describe('ChatInterface Integration Tests', () => {
       const user = userEvent.setup();
       render(<ChatInterface currentUser={mockUser} onBack={mockOnBack} />);
 
-      const input = screen.getByPlaceholderText(/digite seu comando/i) as HTMLInputElement;
+      const input = screen.getByPlaceholderText(/enviar mensagem para fidi/i) as HTMLInputElement;
 
       await user.type(input, 'Test message');
 
@@ -133,7 +104,7 @@ describe('ChatInterface Integration Tests', () => {
       await user.click(newSessionButton);
 
       // Should still have the input field (conversation cleared)
-      expect(screen.getByPlaceholderText(/digite seu comando/i)).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/enviar mensagem para fidi/i)).toBeInTheDocument();
     });
   });
 
@@ -147,19 +118,19 @@ describe('ChatInterface Integration Tests', () => {
   });
 
   describe('Accessibility', () => {
-    it('should have accessible buttons', () => {
-      render(<ChatInterface currentUser={mockUser} onBack={mockOnBack} />);
-
-      // All agent buttons should be accessible
-      const fidiButton = screen.getByTitle('FIDI');
-      expect(fidiButton.tagName).toBe('BUTTON');
-    });
-
     it('should have input with proper placeholder', () => {
       render(<ChatInterface currentUser={mockUser} onBack={mockOnBack} />);
 
-      const input = screen.getByPlaceholderText(/digite seu comando/i);
+      const input = screen.getByPlaceholderText(/enviar mensagem para fidi/i);
       expect(input).toHaveAttribute('type', 'text');
+    });
+
+    it('should have Media Canvas button', () => {
+      render(<ChatInterface currentUser={mockUser} onBack={mockOnBack} />);
+
+      // Check for Canvas button (displays as "Canvas" with "Gerar Mídia" subtitle)
+      const canvasButton = screen.getByText(/canvas/i);
+      expect(canvasButton).toBeInTheDocument();
     });
   });
 });

@@ -1,5 +1,6 @@
 /**
  * CanvasToolbar - Toolbar for spawning nodes and canvas controls
+ * REFACTORED: Industrial Light Theme
  */
 import React from 'react';
 import { Image as ImageIcon, Video, Plus, Trash2 } from 'lucide-react';
@@ -16,39 +17,34 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
     onClearCanvas
 }) => {
     return (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 bg-zinc-900/90 backdrop-blur-sm border border-zinc-700 rounded-xl shadow-2xl pointer-events-auto">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 px-2 py-1.5 bg-white border border-black shadow-md rounded-sm pointer-events-auto">
             {/* Add buttons */}
-            <div className="flex items-center gap-1">
-                <button
-                    onClick={onAddImageNode}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors group"
-                >
-                    <div className="flex items-center justify-center w-5 h-5 rounded bg-pink-500/20 text-pink-400 group-hover:bg-pink-500/30">
-                        <ImageIcon size={12} />
-                    </div>
-                    <span>Image</span>
-                    <Plus size={12} className="text-zinc-500" />
-                </button>
+            <button
+                onClick={onAddImageNode}
+                className="flex items-center gap-2 px-3 py-2 text-xs font-mono uppercase tracking-wide text-text-primary hover:bg-gray-100 rounded-sm transition-colors"
+            >
+                <ImageIcon size={14} />
+                <span>Image</span>
+                <Plus size={10} className="text-text-secondary" />
+            </button>
 
-                <button
-                    onClick={onAddVideoNode}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors group"
-                >
-                    <div className="flex items-center justify-center w-5 h-5 rounded bg-purple-500/20 text-purple-400 group-hover:bg-purple-500/30">
-                        <Video size={12} />
-                    </div>
-                    <span>Video</span>
-                    <Plus size={12} className="text-zinc-500" />
-                </button>
-            </div>
+            <div className="h-5 w-px bg-gray-200" />
 
-            {/* Divider */}
-            <div className="h-6 w-px bg-zinc-700" />
+            <button
+                onClick={onAddVideoNode}
+                className="flex items-center gap-2 px-3 py-2 text-xs font-mono uppercase tracking-wide text-text-primary hover:bg-gray-100 rounded-sm transition-colors"
+            >
+                <Video size={14} />
+                <span>Video</span>
+                <Plus size={10} className="text-text-secondary" />
+            </button>
+
+            <div className="h-5 w-px bg-gray-200" />
 
             {/* Clear button */}
             <button
                 onClick={onClearCanvas}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                className="flex items-center gap-2 px-3 py-2 text-xs font-mono uppercase tracking-wide text-red-500 hover:bg-red-50 rounded-sm transition-colors"
             >
                 <Trash2 size={14} />
                 <span>Clear</span>

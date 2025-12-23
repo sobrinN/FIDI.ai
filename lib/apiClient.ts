@@ -17,7 +17,8 @@ export class APIError extends Error {
     public attemptedModels?: string[],
     public fallbackUsed?: boolean,
     public retryable?: boolean,
-    public technicalDetails?: string
+    public technicalDetails?: string,
+    public currentBalance?: number // Actual balance from backend for credit errors
   ) {
     super(message);
     this.name = 'APIError';
@@ -32,17 +33,35 @@ async function handleResponse(response: Response) {
       code: 'UNKNOWN'
     }));
 
-    // Special handling for insufficient tokens (HTTP 402)
+    // Special handling for insufficient credits/tokens (HTTP 402)
     if (response.status === 402) {
+      // Preserve the original error code from backend (INSUFFICIENT_CREDITS or INSUFFICIENT_TOKENS)
+      const errorCode = error.code || 'INSUFFICIENT_CREDITS';
       throw new APIError(
-        error.error || 'Insufficient tokens',
+        error.error || 'Créditos insuficientes',
         402,
-        'INSUFFICIENT_TOKENS',
+        errorCode,
         ErrorType.INSUFFICIENT_TOKENS,
         error.attemptedModels,
         false,
         false,
-        error.technicalDetails
+        error.technicalDetails,
+        error.currentBalance // Include actual balance from backend
+      );
+    }
+
+    // Special handling for authentication errors (HTTP 401)
+    // Don't redirect automatically - let the user know their session expired
+    if (response.status === 401) {
+      throw new APIError(
+        error.error || 'Sessão expirada. Por favor, recarregue a página e faça login novamente.',
+        401,
+        error.code || 'SESSION_EXPIRED',
+        undefined, // errorType
+        undefined, // attemptedModels
+        false,     // fallbackUsed
+        false,     // retryable
+        'Authentication token expired or invalid'
       );
     }
 
@@ -136,7 +155,8 @@ export async function streamChatCompletion({
               parsed.attemptedModels,
               parsed.fallbackUsed,
               parsed.retryable,
-              parsed.technicalDetails
+              parsed.technicalDetails,
+              parsed.currentBalance // Include actual balance from backend for credit errors
             );
           }
 

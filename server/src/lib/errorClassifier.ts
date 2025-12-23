@@ -11,6 +11,7 @@ export enum ErrorType {
     TIMEOUT = 'TIMEOUT',
     NETWORK = 'NETWORK',
     INSUFFICIENT_TOKENS = 'INSUFFICIENT_TOKENS',
+    EXTERNAL_BILLING = 'EXTERNAL_BILLING', // OpenRouter/external API billing issues
     UNKNOWN = 'UNKNOWN'
 }
 
@@ -41,6 +42,8 @@ const ERROR_MESSAGES: Record<ErrorType, string> = {
         'Network connection error. Please check your internet connection and try again.',
     [ErrorType.INSUFFICIENT_TOKENS]:
         'Insufficient tokens to complete this request. Your balance will reset at the start of next month.',
+    [ErrorType.EXTERNAL_BILLING]:
+        'The AI service (OpenRouter) has a billing issue. Please contact the administrator to add credits to the OpenRouter account.',
     [ErrorType.UNKNOWN]:
         'An unexpected error occurred. We\'re attempting to use alternative models.'
 };
@@ -122,8 +125,40 @@ export function classifyError(error: unknown): ClassifiedError {
         };
     }
 
-    // 402 - Insufficient Tokens (custom)
-    if (statusCode === 402 || message.toLowerCase().includes('insufficient tokens')) {
+    // 402 - Distinguish between app's internal credits and OpenRouter billing
+    if (statusCode === 402) {
+        // Check if this is an OpenRouter billing error (external) vs our app's credit system (internal)
+        const isOpenRouterError = message.toLowerCase().includes('openrouter') ||
+            message.toLowerCase().includes('credit') ||
+            message.toLowerCase().includes('billing') ||
+            message.toLowerCase().includes('payment') ||
+            // OpenRouter errors typically don't have our specific Portuguese message
+            !message.includes('Créditos insuficientes');
+
+        if (isOpenRouterError) {
+            return {
+                type: ErrorType.EXTERNAL_BILLING,
+                statusCode: 402,
+                originalMessage: message,
+                userFriendlyMessage: ERROR_MESSAGES[ErrorType.EXTERNAL_BILLING],
+                retryable: false,
+                technicalDetails: 'OpenRouter account has insufficient credits. Add credits at openrouter.ai'
+            };
+        }
+
+        // Our app's internal credit system
+        return {
+            type: ErrorType.INSUFFICIENT_TOKENS,
+            statusCode: 402,
+            originalMessage: message,
+            userFriendlyMessage: ERROR_MESSAGES[ErrorType.INSUFFICIENT_TOKENS],
+            retryable: false,
+            technicalDetails: 'User token balance too low'
+        };
+    }
+
+    // Also check for "insufficient tokens" text in non-402 errors (legacy support)
+    if (message.toLowerCase().includes('insufficient tokens')) {
         return {
             type: ErrorType.INSUFFICIENT_TOKENS,
             statusCode: 402,

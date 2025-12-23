@@ -24,7 +24,7 @@ describe('useConversations', () => {
 
     // Setup default mock return values
     vi.mocked(storageUtils.getUserConversations).mockReturnValue([]);
-    vi.mocked(storageUtils.setUserConversations).mockImplementation(() => {});
+    vi.mocked(storageUtils.setUserConversations).mockImplementation(() => { });
   });
 
   it('should initialize with empty conversations for new user', () => {
@@ -45,7 +45,7 @@ describe('useConversations', () => {
     const existingConversations: Conversation[] = [
       {
         id: 'conv-1',
-        agentId: '01',
+
         title: 'Test Conversation',
         messages: [],
         createdAt: Date.now(),
@@ -68,7 +68,6 @@ describe('useConversations', () => {
 
     const newConversation: Conversation = {
       id: 'conv-new',
-      agentId: '01',
       title: 'New Chat',
       messages: [],
       createdAt: Date.now(),
@@ -89,7 +88,6 @@ describe('useConversations', () => {
 
     const firstConversation: Conversation = {
       id: 'conv-1',
-      agentId: '01',
       title: 'First',
       messages: [],
       createdAt: Date.now(),
@@ -98,7 +96,6 @@ describe('useConversations', () => {
 
     const secondConversation: Conversation = {
       id: 'conv-2',
-      agentId: '02',
       title: 'Second',
       messages: [],
       createdAt: Date.now(),
@@ -123,7 +120,6 @@ describe('useConversations', () => {
 
     const conversation: Conversation = {
       id: 'conv-update',
-      agentId: '01',
       title: 'Original Title',
       messages: [],
       createdAt: Date.now(),
@@ -151,7 +147,6 @@ describe('useConversations', () => {
 
     const conv1: Conversation = {
       id: 'conv-1',
-      agentId: '01',
       title: 'First',
       messages: [],
       createdAt: Date.now(),
@@ -160,7 +155,6 @@ describe('useConversations', () => {
 
     const conv2: Conversation = {
       id: 'conv-2',
-      agentId: '02',
       title: 'Second',
       messages: [],
       createdAt: Date.now(),
@@ -188,7 +182,6 @@ describe('useConversations', () => {
 
     const conv1: Conversation = {
       id: 'conv-1',
-      agentId: '01',
       title: 'First',
       messages: [],
       createdAt: Date.now(),
@@ -197,7 +190,6 @@ describe('useConversations', () => {
 
     const conv2: Conversation = {
       id: 'conv-2',
-      agentId: '02',
       title: 'Second',
       messages: [],
       createdAt: Date.now(),
@@ -226,7 +218,6 @@ describe('useConversations', () => {
 
     const conversation: Conversation = {
       id: 'conv-only',
-      agentId: '01',
       title: 'Only One',
       messages: [],
       createdAt: Date.now(),
@@ -252,7 +243,6 @@ describe('useConversations', () => {
 
     const conv1: Conversation = {
       id: 'conv-1',
-      agentId: '01',
       title: 'First',
       messages: [],
       createdAt: Date.now(),
@@ -261,7 +251,6 @@ describe('useConversations', () => {
 
     const conv2: Conversation = {
       id: 'conv-2',
-      agentId: '02',
       title: 'Second',
       messages: [],
       createdAt: Date.now(),
@@ -289,7 +278,6 @@ describe('useConversations', () => {
 
     const conversation: Conversation = {
       id: 'conv-save',
-      agentId: '01',
       title: 'Save Test',
       messages: [],
       createdAt: Date.now(),
@@ -316,7 +304,7 @@ describe('useConversations', () => {
     const user1Conversations: Conversation[] = [
       {
         id: 'conv-user1',
-        agentId: '01',
+
         title: 'User 1 Chat',
         messages: [],
         createdAt: Date.now(),
@@ -327,7 +315,6 @@ describe('useConversations', () => {
     const user2Conversations: Conversation[] = [
       {
         id: 'conv-user2',
-        agentId: '02',
         title: 'User 2 Chat',
         messages: [],
         createdAt: Date.now(),
@@ -372,7 +359,7 @@ describe('useConversations', () => {
     const newConversations: Conversation[] = [
       {
         id: 'manual-1',
-        agentId: '01',
+
         title: 'Manual',
         messages: [],
         createdAt: Date.now(),
@@ -408,7 +395,7 @@ describe('useConversations', () => {
     const newConversations: Conversation[] = [
       {
         id: 'reload-1',
-        agentId: '01',
+
         title: 'Reload Test',
         messages: [],
         createdAt: Date.now(),

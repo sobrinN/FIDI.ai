@@ -2,17 +2,19 @@ import React from 'react';
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="bg-black py-12 px-6 border-t border-blue-900/30">
-      <div className="container mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-        <div className="flex flex-col items-center md:items-start">
-          <span className="font-brand text-2xl tracking-normal text-white">FIDI.ai</span>
-          <span className="font-mono text-xs text-blue-500 mt-2">© 2025 FIDI.ai LTDA</span>
+    <footer className="bg-page py-12 px-6 border-t border-gray-300">
+      <div className="container mx-auto flex flex-col md:flex-row justify-between items-end gap-8">
+        <div className="flex flex-col items-start gap-4">
+          <h4 className="font-sans font-bold text-xl tracking-tight text-text-primary">FIDI.ai</h4>
+          <span className="font-mono text-[10px] text-text-secondary uppercase tracking-widest">
+            © 2025 FIDI.ai Systems
+          </span>
         </div>
-        
-        <div className="flex gap-8 font-mono text-xs text-blue-400 uppercase">
-          <a href="#" className="hover:text-white transition-colors">Protocolo de Privacidade</a>
-          <a href="#" className="hover:text-white transition-colors">Termos de Serviço</a>
-          <a href="#" className="hover:text-white transition-colors">Status do Sistema</a>
+
+        <div className="flex gap-8">
+          <a href="#" className="font-mono text-xs text-text-secondary hover:text-text-primary uppercase tracking-wide transition-colors">Privacidade</a>
+          <a href="#" className="font-mono text-xs text-text-secondary hover:text-text-primary uppercase tracking-wide transition-colors">Termos</a>
+          <a href="#" className="font-mono text-xs text-text-secondary hover:text-text-primary uppercase tracking-wide transition-colors">Status</a>
         </div>
       </div>
     </footer>

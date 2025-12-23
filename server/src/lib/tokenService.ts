@@ -1,12 +1,13 @@
 /**
- * Token Service - Manages user token balances, quotas, and monthly resets
+ * Credit Service - Manages user credit balances, quotas, and monthly resets
  * Implements thread-safe operations using file-system locking
+ * Note: "Credits" are the user-facing currency, not tied to LLM token counts
  */
 
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getUserById, updateUser, StoredUser, migrateUserTokenFields, DEFAULT_TOKEN_BALANCE } from './userStorage.js';
+import { getUserById, updateUser, StoredUser, migrateUserCreditFields, PLAN_CONFIG } from './userStorage.js';
 
 // ES module __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -15,31 +16,52 @@ const __dirname = path.dirname(__filename);
 // Lock directory for thread-safe operations
 const LOCK_DIR = path.join(__dirname, '../../data/locks');
 
-// Token costs constants
-export const TOKEN_COSTS = {
-  IMAGE_GENERATION: 5000,
-  VIDEO_GENERATION: 20000,
-  DEFAULT_BALANCE: 50000,
-  RESET_INTERVAL_DAYS: 30
+// Credit costs constants - UNIVERSAL PRICING MODEL
+// Note: "Credits" are user-facing currency, not tied to LLM token counts
+export const CREDIT_COSTS = {
+  // Media generation costs (fixed per operation)
+  IMAGE_GENERATION: 5,           // 5 credits per image (Replicate API)
+  VIDEO_GENERATION: 50,          // 50 credits per video (Replicate API)
+
+  // Text model costs (per 1M LLM tokens from API) - 1:1 ratio (1 credit = 1 token)
+  TEXT_INPUT_PER_1M: 1000000,    // 1M credits per 1M input tokens
+  TEXT_OUTPUT_PER_1M: 1000000,   // 1M credits per 1M output tokens
+
+  // Plan allowances
+  FREE_PLAN_CREDITS: PLAN_CONFIG.free.monthlyCredits,   // 100 credits/month
+  PRO_PLAN_CREDITS: PLAN_CONFIG.pro.monthlyCredits,     // 1000 credits/month
+
+  // System configuration
+  RESET_INTERVAL_DAYS: 30,
+  MIN_CHAT_CREDITS: 1            // Minimum 1 credit per chat request
 } as const;
+
+// Backward compatibility alias (for imports from other files)
+export const TOKEN_COSTS = CREDIT_COSTS;
 
 /**
  * Initialize the lock directory if it doesn't exist
  */
-function initializeLockDir(): void {
-  if (!fs.existsSync(LOCK_DIR)) {
-    fs.mkdirSync(LOCK_DIR, { recursive: true });
+async function initializeLockDir(): Promise<void> {
+  try {
+    await fs.promises.access(LOCK_DIR);
+  } catch {
+    await fs.promises.mkdir(LOCK_DIR, { recursive: true });
     console.log('[TokenService] Created lock directory:', LOCK_DIR);
   }
 }
+
+// Performance: Conditional debug logging
+const DEBUG_TOKENS = process.env.DEBUG_TOKENS === 'true';
 
 /**
  * Acquire a file-system lock for thread-safe operations
  * Returns unlock function if successful
  * Automatically cleans up stale locks (older than 30 seconds)
+ * PERFORMANCE: Uses async fs.promises API to avoid blocking event loop
  */
-async function acquireLock(userId: string): Promise<() => void> {
-  initializeLockDir();
+async function acquireLock(userId: string): Promise<() => Promise<void>> {
+  await initializeLockDir();
 
   const lockFile = path.join(LOCK_DIR, `${userId}.lock`);
   const maxRetries = 50;
@@ -48,37 +70,38 @@ async function acquireLock(userId: string): Promise<() => void> {
 
   for (let i = 0; i < maxRetries; i++) {
     try {
-      // Check if lock exists and if it's stale
-      if (fs.existsSync(lockFile)) {
-        const lockAge = Date.now() - fs.statSync(lockFile).mtimeMs;
+      // Check if lock exists and if it's stale (using async stat)
+      try {
+        const stat = await fs.promises.stat(lockFile);
+        const lockAge = Date.now() - stat.mtimeMs;
 
         // Clean up stale locks
         if (lockAge > STALE_LOCK_MS) {
-          console.warn(`[TokenService] Removing stale lock for user ${userId} (age: ${lockAge}ms)`);
+          if (DEBUG_TOKENS) console.warn(`[TokenService] Removing stale lock for user ${userId} (age: ${lockAge}ms)`);
           try {
-            fs.unlinkSync(lockFile);
+            await fs.promises.unlink(lockFile);
           } catch (unlinkError) {
             // Lock might have been removed by another process
-            console.warn(`[TokenService] Failed to remove stale lock (may already be removed):`, unlinkError);
+            if (DEBUG_TOKENS) console.warn(`[TokenService] Failed to remove stale lock (may already be removed):`, unlinkError);
           }
         }
+      } catch {
+        // Lock file doesn't exist, which is fine - we'll create it
       }
 
-      // Try to acquire lock atomically
-      fs.writeFileSync(lockFile, Date.now().toString(), { flag: 'wx' });
+      // Try to acquire lock atomically using writeFile with exclusive flag
+      await fs.promises.writeFile(lockFile, Date.now().toString(), { flag: 'wx' });
 
-      // Return unlock function
-      return () => {
+      // Return async unlock function
+      return async () => {
         try {
-          if (fs.existsSync(lockFile)) {
-            fs.unlinkSync(lockFile);
-          }
+          await fs.promises.unlink(lockFile);
         } catch (error) {
-          console.error(`[TokenService] Failed to release lock for user ${userId}:`, error);
+          if (DEBUG_TOKENS) console.error(`[TokenService] Failed to release lock for user ${userId}:`, error);
         }
       };
     } catch (error) {
-      // Lock exists, wait and retry
+      // Lock exists or write failed, wait and retry
       await new Promise(resolve => setTimeout(resolve, retryDelay));
     }
   }
@@ -88,33 +111,41 @@ async function acquireLock(userId: string): Promise<() => void> {
 
 
 /**
- * Check if user needs token reset (30 days since last reset)
- * If yes, reset balance and usage counters
+ * Check if user needs credit reset (30 days since last reset)
+ * If yes, reset balance and usage counters based on user's plan
  */
-export async function checkAndResetTokens(userId: string): Promise<StoredUser | null> {
+export async function checkAndResetCredits(userId: string): Promise<StoredUser | null> {
   const user = await getUserById(userId);
   if (!user) {
     return null;
   }
 
   // Use centralized migration logic from userStorage
-  const migratedUser = migrateUserTokenFields(user);
+  const migratedUser = migrateUserCreditFields(user);
 
-  const daysSinceReset = (Date.now() - (migratedUser.lastTokenReset || 0)) / (1000 * 60 * 60 * 24);
+  const daysSinceReset = (Date.now() - (migratedUser.lastCreditReset || 0)) / (1000 * 60 * 60 * 24);
 
-  if (daysSinceReset >= TOKEN_COSTS.RESET_INTERVAL_DAYS) {
-    // Reset tokens
+  if (daysSinceReset >= CREDIT_COSTS.RESET_INTERVAL_DAYS) {
+    // Determine monthly allowance based on plan
+    const plan = migratedUser.plan || 'free';
+    const monthlyAllowance = plan === 'pro'
+      ? CREDIT_COSTS.PRO_PLAN_CREDITS
+      : CREDIT_COSTS.FREE_PLAN_CREDITS;
+
+    // Reset credits with plan-aware balance
     const resetUser = {
       ...migratedUser,
-      tokenBalance: DEFAULT_TOKEN_BALANCE,
-      tokenUsageThisMonth: 0,
-      lastTokenReset: Date.now()
+      creditBalance: monthlyAllowance,
+      creditUsageThisMonth: 0,
+      lastCreditReset: Date.now(),
+      planRenewDate: Date.now() + (CREDIT_COSTS.RESET_INTERVAL_DAYS * 24 * 60 * 60 * 1000)
     };
 
-    console.log('[TokenService] Monthly reset for user:', {
+    console.log('[CreditService] Monthly reset for user:', {
       userId,
+      plan,
       daysSinceReset: daysSinceReset.toFixed(1),
-      newBalance: DEFAULT_TOKEN_BALANCE
+      newBalance: monthlyAllowance
     });
 
     return await updateUser(userId, resetUser);
@@ -128,110 +159,129 @@ export async function checkAndResetTokens(userId: string): Promise<StoredUser | 
   return migratedUser;
 }
 
-/**
- * Get current token balance with auto-reset
- */
-export async function getTokenBalance(userId: string): Promise<number> {
-  const user = await checkAndResetTokens(userId);
-  if (!user) {
-    return 0;
-  }
-  return user.tokenBalance ?? TOKEN_COSTS.DEFAULT_BALANCE;
-}
+// Backward compatibility alias
+export const checkAndResetTokens = checkAndResetCredits;
 
 /**
- * Check if user has sufficient tokens
+ * Get current credit balance with auto-reset
  */
-export async function hasTokens(userId: string, amount: number): Promise<boolean> {
-  const balance = await getTokenBalance(userId);
+export async function getCreditBalance(userId: string): Promise<number> {
+  const user = await checkAndResetCredits(userId);
+  if (!user) {
+    console.warn('[CreditService] User not found for balance check:', userId);
+    return 0;
+  }
+  const plan = user.plan || 'free';
+  const defaultBalance = plan === 'pro' ? CREDIT_COSTS.PRO_PLAN_CREDITS : CREDIT_COSTS.FREE_PLAN_CREDITS;
+  const balance = user.creditBalance ?? defaultBalance;
+
+  // Debug logging to trace balance retrieval
+  console.log('[CreditService] getCreditBalance:', {
+    userId,
+    plan,
+    rawCreditBalance: user.creditBalance,
+    defaultBalance,
+    returnedBalance: balance
+  });
+
+  return balance;
+}
+
+// Backward compatibility alias
+export const getTokenBalance = getCreditBalance;
+
+/**
+ * Check if user has sufficient credits
+ */
+export async function hasCredits(userId: string, amount: number): Promise<boolean> {
+  const balance = await getCreditBalance(userId);
   return balance >= amount;
 }
 
+// Backward compatibility alias
+export const hasTokens = hasCredits;
+
 /**
- * Deduct tokens from user balance (thread-safe)
+ * Deduct credits from user balance (thread-safe)
  * CRITICAL: Only call after successful API operation
  * FIX: Moved user update INSIDE the lock to prevent TOCTOU race condition
- *
- * @param costMultiplier - Cost multiplier (0 for FREE, 1.5 for PAID, 1.0 for LEGACY)
  */
-export async function deductTokens(
+export async function deductCredits(
   userId: string,
   amount: number,
-  reason: string,
-  costMultiplier: number = 1.0
+  reason: string
 ): Promise<{ success: boolean; newBalance: number; error?: string }> {
   if (amount < 0) {
-    console.error('[TokenService] Invalid token amount:', amount);
-    return { success: false, newBalance: 0, error: 'Invalid token amount' };
+    console.error('[CreditService] Invalid credit amount:', amount);
+    return { success: false, newBalance: 0, error: 'Quantidade de créditos inválida' };
+  }
+
+  // Allow zero-cost operations (e.g., free tier tracking)
+  if (amount === 0) {
+    const balance = await getCreditBalance(userId);
+    console.log('[CreditService] Zero-cost operation (no deduction)', {
+      userId,
+      reason,
+      currentBalance: balance
+    });
+    return { success: true, newBalance: balance };
   }
 
   // Acquire lock for thread-safe operation
   const unlock = await acquireLock(userId);
 
   try {
-    // Check and reset tokens if needed
-    const user = await checkAndResetTokens(userId);
+    // Check and reset credits if needed
+    const user = await checkAndResetCredits(userId);
     if (!user) {
-      return { success: false, newBalance: 0, error: 'User not found' };
+      return { success: false, newBalance: 0, error: 'Usuário não encontrado' };
     }
 
-    // FIX: Use null coalescing for all optional token fields
-    const currentBalance = user.tokenBalance ?? TOKEN_COSTS.DEFAULT_BALANCE;
-    const currentUsageTotal = user.tokenUsageTotal ?? 0;
-    const currentUsageMonth = user.tokenUsageThisMonth ?? 0;
+    // Get plan-aware default balance
+    const plan = user.plan || 'free';
+    const defaultBalance = plan === 'pro' ? CREDIT_COSTS.PRO_PLAN_CREDITS : CREDIT_COSTS.FREE_PLAN_CREDITS;
 
-    // FREE MODEL BYPASS: No deduction for free tier models (costMultiplier = 0)
-    if (costMultiplier === 0) {
-      console.log('[TokenService] Free model usage (no deduction)', {
+    // Use null coalescing for all optional credit fields
+    const currentBalance = user.creditBalance ?? defaultBalance;
+    const currentUsageTotal = user.creditUsageTotal ?? 0;
+    const currentUsageMonth = user.creditUsageThisMonth ?? 0;
+
+    // Check sufficient balance
+    if (currentBalance < amount) {
+      console.warn('[CreditService] Insufficient credits', {
         userId,
-        baseTokens: amount,
-        costMultiplier: 0,
-        reason,
-        currentBalance
-      });
-      return { success: true, newBalance: currentBalance };
-    }
-
-    // Calculate actual cost with multiplier
-    const actualCost = Math.ceil(amount * costMultiplier);
-
-    if (currentBalance < actualCost) {
-      console.warn('[TokenService] Insufficient tokens', {
-        userId,
-        baseTokens: amount,
-        costMultiplier,
-        actualCost,
+        plan,
+        required: amount,
         available: currentBalance,
         reason
       });
       return {
         success: false,
         newBalance: currentBalance,
-        error: 'Insufficient tokens'
+        error: 'Créditos insuficientes'
       };
     }
 
-    // Calculate new values with actual cost
-    const newBalance = currentBalance - actualCost;
-    const newUsageTotal = currentUsageTotal + actualCost;
-    const newUsageThisMonth = currentUsageMonth + actualCost;
+    // Calculate new values
+    const newBalance = currentBalance - amount;
+    const newUsageTotal = currentUsageTotal + amount;
+    const newUsageThisMonth = currentUsageMonth + amount;
 
     // CRITICAL FIX: Update user BEFORE releasing lock to prevent race condition
     const updatedUser = await updateUser(userId, {
-      tokenBalance: newBalance,
-      tokenUsageTotal: newUsageTotal,
-      tokenUsageThisMonth: newUsageThisMonth
+      creditBalance: newBalance,
+      creditUsageTotal: newUsageTotal,
+      creditUsageThisMonth: newUsageThisMonth
     });
 
     if (!updatedUser) {
-      return { success: false, newBalance: currentBalance, error: 'Failed to update user' };
+      return { success: false, newBalance: currentBalance, error: 'Falha ao atualizar usuário' };
     }
 
-    console.log('[TokenService] Tokens deducted', {
+    console.log('[CreditService] Credits deducted', {
       userId,
-      baseTokens: amount,
-      costMultiplier,
-      actualCost,
+      plan,
+      credits: amount,
       reason,
       previousBalance: currentBalance,
       newBalance,
@@ -241,15 +291,18 @@ export async function deductTokens(
     return { success: true, newBalance };
   } finally {
     // Lock is released AFTER user update completes
-    unlock();
+    await unlock();
   }
 }
 
+// Backward compatibility alias
+export const deductTokens = deductCredits;
+
 /**
- * Grant tokens to user (admin only)
+ * Grant credits to user (admin only)
  * FIX: Moved user update INSIDE the lock to prevent TOCTOU race condition
  */
-export async function grantTokens(
+export async function grantCredits(
   userId: string,
   amount: number,
   adminId: string
@@ -257,36 +310,40 @@ export async function grantTokens(
   // Check if admin has permission
   const admin = await getUserById(adminId);
   if (!admin?.isAdmin) {
-    console.warn('[TokenService] Unauthorized token grant attempt', { adminId, userId });
-    return { success: false, newBalance: 0, error: 'Unauthorized' };
+    console.warn('[CreditService] Unauthorized credit grant attempt', { adminId, userId });
+    return { success: false, newBalance: 0, error: 'Não autorizado' };
   }
 
   if (amount <= 0) {
-    return { success: false, newBalance: 0, error: 'Invalid amount' };
+    return { success: false, newBalance: 0, error: 'Quantidade inválida' };
   }
 
   const unlock = await acquireLock(userId);
 
   try {
-    const user = await checkAndResetTokens(userId);
+    const user = await checkAndResetCredits(userId);
     if (!user) {
-      return { success: false, newBalance: 0, error: 'User not found' };
+      return { success: false, newBalance: 0, error: 'Usuário não encontrado' };
     }
 
-    // FIX: Use null coalescing for optional token fields
-    const currentBalance = user.tokenBalance ?? TOKEN_COSTS.DEFAULT_BALANCE;
+    // Get plan-aware default balance
+    const plan = user.plan || 'free';
+    const defaultBalance = plan === 'pro' ? CREDIT_COSTS.PRO_PLAN_CREDITS : CREDIT_COSTS.FREE_PLAN_CREDITS;
+
+    // Use null coalescing for optional credit fields
+    const currentBalance = user.creditBalance ?? defaultBalance;
     const newBalance = currentBalance + amount;
 
     // CRITICAL FIX: Update user BEFORE releasing lock
     const updatedUser = await updateUser(userId, {
-      tokenBalance: newBalance
+      creditBalance: newBalance
     });
 
     if (!updatedUser) {
-      return { success: false, newBalance: currentBalance, error: 'Failed to update user' };
+      return { success: false, newBalance: currentBalance, error: 'Falha ao atualizar usuário' };
     }
 
-    console.log('[TokenService] Tokens granted', {
+    console.log('[CreditService] Credits granted', {
       userId,
       amount,
       adminId,
@@ -297,36 +354,47 @@ export async function grantTokens(
     return { success: true, newBalance };
   } finally {
     // Lock is released AFTER user update completes
-    unlock();
+    await unlock();
   }
 }
+
+// Backward compatibility alias
+export const grantTokens = grantCredits;
 
 /**
  * Get usage statistics for a user
  */
 export interface UsageStats {
-  tokenBalance: number;
-  tokenUsageTotal: number;
-  tokenUsageThisMonth: number;
-  lastTokenReset: number;
+  creditBalance: number;
+  creditUsageTotal: number;
+  creditUsageThisMonth: number;
+  lastCreditReset: number;
   daysUntilReset: number;
+  plan: 'free' | 'pro';
+  monthlyAllowance: number;
+  planRenewDate: number;
 }
 
 export async function getUsageStats(userId: string): Promise<UsageStats | null> {
-  const user = await checkAndResetTokens(userId);
+  const user = await checkAndResetCredits(userId);
   if (!user) {
     return null;
   }
 
-  const lastReset = user.lastTokenReset ?? Date.now();
+  const plan = user.plan || 'free';
+  const monthlyAllowance = plan === 'pro' ? CREDIT_COSTS.PRO_PLAN_CREDITS : CREDIT_COSTS.FREE_PLAN_CREDITS;
+  const lastReset = user.lastCreditReset ?? Date.now();
   const daysSinceReset = (Date.now() - lastReset) / (1000 * 60 * 60 * 24);
-  const daysUntilReset = Math.max(0, TOKEN_COSTS.RESET_INTERVAL_DAYS - daysSinceReset);
+  const daysUntilReset = Math.max(0, CREDIT_COSTS.RESET_INTERVAL_DAYS - daysSinceReset);
 
   return {
-    tokenBalance: user.tokenBalance ?? TOKEN_COSTS.DEFAULT_BALANCE,
-    tokenUsageTotal: user.tokenUsageTotal ?? 0,
-    tokenUsageThisMonth: user.tokenUsageThisMonth ?? 0,
-    lastTokenReset: lastReset,
-    daysUntilReset: Math.ceil(daysUntilReset)
+    creditBalance: user.creditBalance ?? monthlyAllowance,
+    creditUsageTotal: user.creditUsageTotal ?? 0,
+    creditUsageThisMonth: user.creditUsageThisMonth ?? 0,
+    lastCreditReset: lastReset,
+    daysUntilReset: Math.ceil(daysUntilReset),
+    plan,
+    monthlyAllowance,
+    planRenewDate: user.planRenewDate ?? (Date.now() + (30 * 24 * 60 * 60 * 1000))
   };
 }

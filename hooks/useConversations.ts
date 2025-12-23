@@ -3,7 +3,7 @@
  * Manages conversation state and persistence
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Conversation, User } from '../types';
 import { getUserConversations, setUserConversations } from '../lib/storageUtils';
 
@@ -17,6 +17,7 @@ interface UseConversationsReturn {
   updateConversation: (id: string, updates: Partial<Conversation>) => void;
   deleteConversation: (id: string) => void;
   loadConversations: () => void;
+  saveConversations: () => void;
 }
 
 export const useConversations = (currentUser: User | null): UseConversationsReturn => {
@@ -24,9 +25,22 @@ export const useConversations = (currentUser: User | null): UseConversationsRetu
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Load conversations on mount and when user changes
-  // FIXED: Removed currentId from deps to avoid stale closure issues
+  // Track the current user ID to detect actual user changes (not just object reference changes)
+  const currentUserIdRef = useRef<string | null>(null);
+
+  // Load conversations on mount and when user ID changes (not when user object reference changes)
+  // FIX: Changed dependency from entire currentUser to currentUser?.id to prevent
+  // unnecessary reloads when user data (like creditBalance) updates
   const loadConversations = useCallback(() => {
+    const userId = currentUser?.id ?? null;
+
+    // Only reload if user ID actually changed (prevents reload on creditBalance updates)
+    if (userId === currentUserIdRef.current && currentUserIdRef.current !== null) {
+      return; // Skip reload - same user, already loaded
+    }
+
+    currentUserIdRef.current = userId;
+
     if (currentUser) {
       const userConvos = getUserConversations(currentUser.id);
       setConversations(userConvos);
@@ -47,22 +61,49 @@ export const useConversations = (currentUser: User | null): UseConversationsRetu
       setCurrentId(null);
       setIsInitialized(false);
     }
-  }, [currentUser]);
+  }, [currentUser?.id]); // FIX: Only depend on user ID, not entire user object
 
   // Load on mount and user change
-  // FIXED: Include loadConversations in deps (proper dependency management)
   useEffect(() => {
     loadConversations();
   }, [loadConversations]);
 
-  // Save conversations whenever they change
-  // FIXED: Also persist empty conversation list to properly handle deletions
+
+  // Keep ref up to date for immediate saving
+  const conversationsRef = useRef(conversations);
   useEffect(() => {
-    if (currentUser) {
-      // Always save, even if empty (to properly clear deleted conversations)
-      setUserConversations(currentUser.id, conversations);
-    }
+    conversationsRef.current = conversations;
+  }, [conversations]);
+
+  // Save conversations whenever they change (debounced)
+  // FIXED: Also persist empty conversation list to properly handle deletions
+  // PERF: Debounce writes to prevent trashing during streaming (writes every 1s max)
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const timeoutId = setTimeout(() => {
+      try {
+        // Always save, even if empty (to properly clear deleted conversations)
+        setUserConversations(currentUser.id, conversations);
+      } catch (error) {
+        console.error('[useConversations] Failed to save conversations:', error);
+      }
+    }, 1000); // 1 second debounce
+
+    return () => clearTimeout(timeoutId);
   }, [conversations, currentUser?.id]);
+
+  // Manual save method that uses the ref to get latest data (bypassing closure staleness)
+  const saveConversations = useCallback(() => {
+    if (currentUser?.id && conversationsRef.current) {
+      try {
+        setUserConversations(currentUser.id, conversationsRef.current);
+        // console.log('[useConversations] Manual save triggered');
+      } catch (error) {
+        console.error('[useConversations] Manual save failed:', error);
+      }
+    }
+  }, [currentUser?.id]);
 
   const addConversation = useCallback((conversation: Conversation) => {
     setConversations(prev => [conversation, ...prev]);
@@ -101,6 +142,7 @@ export const useConversations = (currentUser: User | null): UseConversationsRetu
     addConversation,
     updateConversation,
     deleteConversation,
-    loadConversations
+    loadConversations,
+    saveConversations
   };
 };

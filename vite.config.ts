@@ -6,6 +6,11 @@ export default defineConfig({
   server: {
     port: 3000,
     host: '0.0.0.0',
+    // FIX: Ignore server directory to prevent page reload when backend writes to data files
+    // This was causing the chat to redirect to landing page after each message
+    watch: {
+      ignored: ['**/server/**', '**/node_modules/**'],
+    },
   },
   plugins: [react()],
   resolve: {
@@ -34,7 +39,7 @@ export default defineConfig({
 
           // Configuration
           'config': [
-            './config/agents',
+            './config/models',
           ],
 
           // Utility libraries

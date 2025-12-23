@@ -47,18 +47,16 @@ export type ModelParams = _ModelParams;
 type AdapterFunction = (systemPrompt: string, messages: Message[]) => Message[];
 
 /**
- * Default adapter - Uses standard system role
+ * Universal adapter - Prepends system prompt to first user message
+ * OpenRouter expects NO system role - system prompt should be prepended to first user message
+ * This matches the pattern shown in api-manipulator-skill documentation
  */
-const defaultAdapter: AdapterFunction = (systemPrompt, messages) => [
-  { role: 'system', content: systemPrompt },
-  ...messages
-];
+const prependSystemPromptAdapter: AdapterFunction = (systemPrompt, messages) => {
+  // If no system prompt provided, return messages unchanged
+  if (!systemPrompt || systemPrompt.trim() === '') {
+    return messages;
+  }
 
-/**
- * X.AI Grok adapter - Prepends system prompt to first user message
- * Grok models don't properly support the 'system' role
- */
-const grokAdapter: AdapterFunction = (systemPrompt, messages) => {
   const formattedMessages = [...messages];
 
   if (formattedMessages.length > 0 && formattedMessages[0].role === 'user') {
@@ -87,31 +85,17 @@ const grokAdapter: AdapterFunction = (systemPrompt, messages) => {
 };
 
 /**
- * Anthropic Claude adapter - Uses standard system role
- * Claude models support system role natively
+ * All adapters now use the same prepend pattern
+ * This ensures consistent routing across all models on OpenRouter
  */
-const claudeAdapter: AdapterFunction = defaultAdapter;
-
-/**
- * OpenAI adapter - Uses standard system role
- */
-const openaiAdapter: AdapterFunction = defaultAdapter;
-
-/**
- * Google Gemini adapter - Uses standard system role
- * Gemini models support the system role natively
- */
-const geminiAdapter: AdapterFunction = defaultAdapter;
-
-/**
- * Mistral adapter - Uses standard system role
- */
-const mistralAdapter: AdapterFunction = defaultAdapter;
-
-/**
- * Qwen adapter - Uses standard system role
- */
-const qwenAdapter: AdapterFunction = defaultAdapter;
+const grokAdapter: AdapterFunction = prependSystemPromptAdapter;
+const geminiAdapter: AdapterFunction = prependSystemPromptAdapter;
+const claudeAdapter: AdapterFunction = prependSystemPromptAdapter;
+const openaiAdapter: AdapterFunction = prependSystemPromptAdapter;
+const deepseekAdapter: AdapterFunction = prependSystemPromptAdapter;
+const minimaxAdapter: AdapterFunction = prependSystemPromptAdapter;
+const mistralAdapter: AdapterFunction = prependSystemPromptAdapter;
+const qwenAdapter: AdapterFunction = prependSystemPromptAdapter;
 
 /**
  * Model adapter registry
@@ -121,34 +105,42 @@ const adapterRegistry: Record<string, AdapterFunction> = {
   // X.AI models
   'x-ai': grokAdapter,
   'x-ai/grok': grokAdapter,
-  'x-ai/glm': defaultAdapter, // GLM models use standard system role
-
-  // Anthropic models
-  'anthropic': claudeAdapter,
-  'anthropic/claude': claudeAdapter,
-
-  // OpenAI models
-  'openai': openaiAdapter,
-  'openai/gpt': openaiAdapter,
+  'x-ai/grok-code': grokAdapter, // Grok Code models also need the adapter
 
   // Google Gemini models
   'google': geminiAdapter,
   'google/gemini': geminiAdapter,
+  'google/gemini-3-flash-preview': geminiAdapter, // Specific model variant
+
+  // Anthropic models
+  'anthropic': claudeAdapter,
+  'anthropic/claude': claudeAdapter,
+  'anthropic/claude-sonnet': claudeAdapter, // Specific model variant
+
+  // OpenAI models
+  'openai': openaiAdapter,
+  'openai/gpt': openaiAdapter,
+  'openai/gpt-oss': openaiAdapter, // Specific model variant
+
+  // DeepSeek models
+  'deepseek': deepseekAdapter,
+  'deepseek/deepseek': deepseekAdapter, // Specific model variant
+  'deepseek/deepseek-v3': deepseekAdapter, // Specific version variant
+
+  // MiniMax models
+  'minimax': minimaxAdapter,
+  'minimax/minimax': minimaxAdapter, // Specific model variant
+  'minimax/minimax-m': minimaxAdapter, // Specific version variant
 
   // Mistral models
   'mistralai': mistralAdapter,
+  'mistralai/devstral': mistralAdapter, // Specific model variant
 
   // Qwen models
   'qwen': qwenAdapter,
 
-  // Kwaipilot models
-  'kwaipilot': defaultAdapter,
-
-  // MiniMax models
-  'minimax': defaultAdapter,
-
-  // Default fallback
-  'default': defaultAdapter
+  // Default fallback - use universal prepend adapter
+  'default': prependSystemPromptAdapter
 };
 
 /**

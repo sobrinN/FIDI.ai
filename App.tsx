@@ -8,6 +8,7 @@ import { CallToAction } from './components/CallToAction';
 import { Footer } from './components/Footer';
 import { Toast } from './components/Toast';
 import { NeuralBackground } from './components/NeuralBackground';
+import { PlanUpgradeModal } from './components/PlanUpgradeModal';
 import { AnimatePresence, motion } from 'framer-motion';
 import { User } from './types';
 import { LoadingSpinner } from './components/LoadingSpinner';
@@ -26,11 +27,43 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export default function App() {
   const [scrollY, setScrollY] = useState(0);
-  const [view, setView] = useState<ViewState>('landing');
+  const [view, setViewInternal] = useState<ViewState>('landing');
+
+  // DEBUG: Persistent logging helper (survives page reload)
+  const debugLog = useCallback((message: string) => {
+    const logs = JSON.parse(localStorage.getItem('debug_logs') || '[]');
+    logs.push({ time: new Date().toISOString(), message });
+    // Keep only last 50 logs
+    if (logs.length > 50) logs.shift();
+    localStorage.setItem('debug_logs', JSON.stringify(logs));
+    console.log(`[DEBUG] ${message}`);
+  }, []);
+
+  // On mount, show any previous debug logs (from before reload)
+  useEffect(() => {
+    const logs = JSON.parse(localStorage.getItem('debug_logs') || '[]');
+    if (logs.length > 0) {
+      console.log('=== DEBUG LOGS FROM BEFORE RELOAD ===');
+      logs.forEach((log: { time: string; message: string }) => {
+        console.log(`${log.time}: ${log.message}`);
+      });
+      console.log('=== END DEBUG LOGS ===');
+    }
+    // Clear after displaying
+    localStorage.removeItem('debug_logs');
+  }, []);
+
+  // DEBUG: Wrapper to trace all view state changes
+  const setView = useCallback((newView: ViewState) => {
+    debugLog(`setView called: ${view} -> ${newView}`);
+    console.trace('[DEBUG] setView stack trace');
+    setViewInternal(newView);
+  }, [view, debugLog]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [isVerifyingSession, setIsVerifyingSession] = useState(true);
   const [intendedView, setIntendedView] = useState<ViewState | null>(null);
+  const [showPlanUpgrade, setShowPlanUpgrade] = useState(false);
 
   /**
    * Verify session with backend and get fresh user data
@@ -95,9 +128,12 @@ export default function App() {
             try {
               const healthCheck = await fetch(`${API_URL}/api/health`);
               if (healthCheck.ok) {
-                // Server is reachable but token is invalid - clear session
-                clearUserSession();
-                setCurrentUser(null);
+                // Server is reachable but token is invalid
+                // FIX: Only clear session if not in active chat to prevent redirect bug
+                // User can continue using cached session until they leave the chat
+                console.warn('[App] JWT token invalid but keeping cached session to prevent disruption');
+                // Don't clear session or user - let them continue with cached data
+                // Session will be properly cleared on next app load or explicit logout
               }
               // If health check fails, keep localStorage session (offline mode)
             } catch {
@@ -156,6 +192,11 @@ export default function App() {
     setView('landing');
   };
 
+  const handleUpgradeSuccess = (updatedUser: User) => {
+    setCurrentUser(updatedUser);
+    setUserSession(updatedUser);
+  };
+
   const handleAccessSystem = () => {
     if (currentUser) {
       setView('chat');
@@ -173,19 +214,19 @@ export default function App() {
   // Show loading spinner while verifying session
   if (isVerifyingSession) {
     return (
-      <div className="min-h-screen bg-black text-white font-sans flex items-center justify-center">
-        <NeuralBackground />
+      <div className="min-h-screen bg-page text-text-primary font-sans flex items-center justify-center">
+        {/* <NeuralBackground /> */}
         <LoadingSpinner />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans selection:bg-white selection:text-black relative">
-      <NeuralBackground />
+    <div className="min-h-screen bg-page text-text-primary font-sans selection:bg-accent selection:text-white relative">
+      {/* <NeuralBackground /> */}
 
-      {/* Vignette Overlay to focus center */}
-      <div className="fixed inset-0 pointer-events-none z-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.8)_100%)]" />
+      {/* Vignette Overlay to focus center - Disabled for clean look */}
+      {/* <div className="fixed inset-0 pointer-events-none z-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.8)_100%)]" /> */}
 
       <Toast
         message="Efetue o login para acessar o sistema."
@@ -193,13 +234,13 @@ export default function App() {
         onClose={() => setShowToast(false)}
       />
 
-      <AnimatePresence mode="wait">
+      <AnimatePresence>
         {view === 'landing' ? (
           <motion.div
             key="landing"
-            initial={{ opacity: 0, filter: 'blur(20px)' }}
-            animate={{ opacity: 1, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, scale: 0.95, filter: 'blur(20px)' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
             className="relative z-10"
           >
@@ -211,14 +252,21 @@ export default function App() {
               currentUser={currentUser}
               onLogout={handleLogout}
             />
-            <main>
-              <Hero />
-              <ValueProposition />
-              <Features />
-              <TrustSignals />
-              <CallToAction onAccessSystem={handleAccessSystem} />
-            </main>
-            <Footer />
+            <motion.div
+              initial={{ filter: 'blur(20px)' }}
+              animate={{ filter: 'blur(0px)' }}
+              exit={{ scale: 0.95, filter: 'blur(20px)' }}
+              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <main>
+                <Hero />
+                <ValueProposition />
+                <Features />
+                <TrustSignals />
+                <CallToAction onAccessSystem={handleAccessSystem} />
+              </main>
+              <Footer />
+            </motion.div>
           </motion.div>
         ) : view === 'auth' ? (
           <Suspense fallback={<LoadingSpinner />}>
@@ -247,12 +295,26 @@ export default function App() {
                 transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
                 className="relative z-20 h-screen w-full"
               >
-                <ChatInterface onBack={() => setView('landing')} currentUser={currentUser} />
+                <ChatInterface
+                  onBack={() => setView('landing')}
+                  currentUser={currentUser}
+                  onUpgradeClick={() => setShowPlanUpgrade(true)}
+                />
               </motion.div>
             </ErrorBoundary>
           </Suspense>
         )}
       </AnimatePresence>
+
+      {/* Plan Upgrade Modal */}
+      {currentUser && (
+        <PlanUpgradeModal
+          isOpen={showPlanUpgrade}
+          onClose={() => setShowPlanUpgrade(false)}
+          currentUser={currentUser}
+          onUpgradeSuccess={handleUpgradeSuccess}
+        />
+      )}
     </div>
   );
 }

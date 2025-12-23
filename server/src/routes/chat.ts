@@ -4,9 +4,12 @@ import { APIError } from '../middleware/errorHandler.js';
 import { AuthRequest } from '../middleware/auth.js';
 import { formatMessagesForModel } from '../lib/modelAdapters.js';
 import { isAllowedModel, getAllowedModelsString, getModelCostMultiplier } from '../config/allowedModels.js';
-import { deductTokens, getTokenBalance } from '../lib/tokenService.js';
+import { deductTokens, getTokenBalance, CREDIT_COSTS } from '../lib/tokenService.js';
 import { getModelsToAttempt } from '../config/fallbackConfig.js';
 import { classifyError, shouldTriggerFallback, isTerminalError, ErrorType, ClassifiedError } from '../lib/errorClassifier.js';
+
+// Performance: Conditional debug logging to avoid blocking event loop
+const DEBUG_CHAT = process.env.DEBUG_CHAT === 'true';
 
 
 export const chatRouter = Router();
@@ -15,7 +18,6 @@ export const chatRouter = Router();
 const MAX_MESSAGES_PER_CONVERSATION = 1000;
 const MAX_MESSAGE_LENGTH = 32000; // 32KB per message
 const STREAM_TIMEOUT_MS = 120000; // 2 minutes
-const MIN_TOKENS_FOR_CHAT = 100; // Minimum tokens required to start a chat
 
 /**
  * Sanitize user input to prevent prompt injection
@@ -122,6 +124,14 @@ chatRouter.post('/stream', async (req: AuthRequest, res, next) => {
   try {
     const { model, systemPrompt, messages } = req.body;
 
+    // PERFORMANCE: Only log when DEBUG_CHAT is enabled
+    if (DEBUG_CHAT) {
+      console.log('\n[Chat Request] ===== NEW CHAT REQUEST =====');
+      console.log('[Chat Request] Model requested:', model);
+      console.log('[Chat Request] User ID:', req.user?.id);
+      console.log('[Chat Request] Message count:', messages?.length);
+    }
+
     // Validation
     if (!model || typeof model !== 'string') {
       throw new APIError('Invalid or missing model', 400, 'INVALID_MODEL');
@@ -129,6 +139,7 @@ chatRouter.post('/stream', async (req: AuthRequest, res, next) => {
 
     // SECURITY: Validate model against allowlist to prevent unauthorized expensive model usage
     if (!isAllowedModel(model)) {
+      console.log('[Chat Request] ❌ Model not in allowlist:', model);
       throw new APIError(
         `Model "${model}" is not authorized. Allowed models: ${getAllowedModelsString()}`,
         400,
@@ -136,34 +147,53 @@ chatRouter.post('/stream', async (req: AuthRequest, res, next) => {
       );
     }
 
-    if (!systemPrompt || typeof systemPrompt !== 'string') {
-      throw new APIError('Invalid or missing systemPrompt', 400, 'INVALID_PROMPT');
-    }
+    if (DEBUG_CHAT) console.log('[Chat Request] ✅ Model validated successfully');
+
+    // systemPrompt is now optional - default to empty string for direct LLM chat
+    const effectiveSystemPrompt = (typeof systemPrompt === 'string') ? systemPrompt : '';
 
     // Validate and sanitize messages (includes message count limit check)
     const validatedMessages = validateMessages(messages);
 
-    // Pre-flight token check: ensure user has minimum tokens before streaming
-    // For FREE tier models (costMultiplier = 0), skip the check
-    const costMultiplier = getModelCostMultiplier(model);
-    if (costMultiplier > 0 && req.user) {
-      const currentBalance = await getTokenBalance(req.user.id);
-      if (currentBalance < MIN_TOKENS_FOR_CHAT) {
-        throw new APIError(
-          `Insufficient tokens. Required: at least ${MIN_TOKENS_FOR_CHAT}, Available: ${currentBalance}. Tokens reset monthly.`,
-          402,
-          'INSUFFICIENT_TOKENS'
-        );
-      }
-    }
-
-    const openRouter = getOpenRouterClient();
-
-    // Set SSE headers
+    // PERFORMANCE: Set SSE headers FIRST to reduce Time-To-First-Byte
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+
+    // Pre-flight credit check: only block when user has ZERO credits
+    if (req.user) {
+      const currentBalance = await getTokenBalance(req.user.id);
+
+      // Debug logging to trace credit check flow
+      if (DEBUG_CHAT) {
+        console.log('[Chat] Pre-flight credit check:', {
+          userId: req.user.id,
+          currentBalance,
+          threshold: 0,
+          willBlock: currentBalance <= 0
+        });
+      }
+
+      if (currentBalance <= 0) {
+        console.warn('[Chat] BLOCKED - User has no credits:', {
+          userId: req.user.id,
+          balance: currentBalance
+        });
+        // Send error as SSE since headers are already sent
+        res.write(`data: ${JSON.stringify({
+          error: 'Créditos insuficientes. Você não possui créditos disponíveis. Os créditos renovam mensalmente.',
+          code: 'INSUFFICIENT_CREDITS',
+          errorType: 'INSUFFICIENT_TOKENS',
+          currentBalance,
+          retryable: false
+        })}\n\n`);
+        res.end();
+        return;
+      }
+    }
+
+    const openRouter = getOpenRouterClient();
 
     // Create abort controller for timeout
     const controller = new AbortController();
@@ -181,11 +211,19 @@ chatRouter.post('/stream', async (req: AuthRequest, res, next) => {
      */
     async function attemptStreamWithModel(currentModel: string): Promise<boolean> {
       attemptedModels.push(currentModel);
-      console.log(`[Chat Fallback] Attempting model: ${currentModel} (attempt ${attemptedModels.length}/${modelsToAttempt.length})`);
+      if (DEBUG_CHAT) console.log(`[Chat Fallback] Attempting model: ${currentModel} (attempt ${attemptedModels.length}/${modelsToAttempt.length})`);
 
       try {
         // Use model adapter to format messages appropriately for each model
-        const formattedMessages = formatMessagesForModel(currentModel, systemPrompt, validatedMessages);
+        const formattedMessages = formatMessagesForModel(currentModel, effectiveSystemPrompt, validatedMessages);
+
+        // DIAGNOSTIC: Log exactly what we're sending to OpenRouter
+        if (DEBUG_CHAT) {
+          console.log('[Chat API Call] Model ID being sent to OpenRouter:', currentModel);
+          console.log('[Chat API Call] System prompt length:', effectiveSystemPrompt.length);
+          console.log('[Chat API Call] Number of messages:', formattedMessages.length);
+          console.log('[Chat API Call] First message role:', formattedMessages[0]?.role);
+        }
 
         // Request usage data from OpenRouter
         // Cast messages to any to handle SDK type mismatch (our Message type is compatible at runtime)
@@ -200,52 +238,85 @@ chatRouter.post('/stream', async (req: AuthRequest, res, next) => {
           signal: controller.signal
         });
 
-        let totalTokensUsed = 0;
+        let promptTokens = 0;
+        let completionTokens = 0;
         let usageCaptured = false;
 
         // Stream content to client
         for await (const chunk of stream) {
+          // DIAGNOSTIC: Log chunk metadata if available
+          if (DEBUG_CHAT && (chunk as any).model) {
+            console.log('[Chat Response] OpenRouter reports model used:', (chunk as any).model);
+          }
+
           const content = chunk.choices?.[0]?.delta?.content;
           if (content) {
             res.write(`data: ${JSON.stringify({ content })}\n\n`);
           }
 
-          // Capture token usage from final chunk
-          if (chunk.usage?.totalTokens) {
-            totalTokensUsed = chunk.usage.totalTokens;
+          // Capture token usage from final chunk (split into input/output)
+          if (chunk.usage?.promptTokens && chunk.usage?.completionTokens) {
+            promptTokens = chunk.usage.promptTokens;
+            completionTokens = chunk.usage.completionTokens;
             usageCaptured = true;
+            if (DEBUG_CHAT) console.log('[Chat Usage] Prompt tokens:', promptTokens, 'Completion tokens:', completionTokens);
           }
         }
 
         // FIX: Handle missing usage data from OpenRouter
-        if (!usageCaptured || totalTokensUsed === 0) {
+        if (!usageCaptured || (promptTokens === 0 && completionTokens === 0)) {
           console.warn('[Chat] No usage data received from OpenRouter for request. Unable to deduct tokens.');
           res.write(`data: ${JSON.stringify({
             warning: 'Token usage could not be tracked for this request'
           })}\n\n`);
         }
 
-        // Deduct tokens after successful stream completion (only if we have usage data)
-        if (usageCaptured && totalTokensUsed > 0 && req.user) {
+        // Deduct credits after successful stream completion (only if we have usage data)
+        if (usageCaptured && (promptTokens > 0 || completionTokens > 0) && req.user) {
           try {
-            // Get cost multiplier for this model (0 for FREE, 1.5 for PAID, 1.0 for LEGACY)
-            const costMultiplier = getModelCostMultiplier(currentModel);
-            const actualCost = Math.ceil(totalTokensUsed * costMultiplier);
+            // NEW PRICING MODEL: Calculate cost based on input/output split
+            // Cost = ((promptTokens/1M × 100) + (completionTokens/1M × 300)) * Multiplier
+            // PERFORMANCE: CREDIT_COSTS is now imported at top-level (no dynamic import)
+            const multiplier = getModelCostMultiplier(currentModel);
+            const inputCost = (promptTokens / 1_000_000) * CREDIT_COSTS.TEXT_INPUT_PER_1M;
+            const outputCost = (completionTokens / 1_000_000) * CREDIT_COSTS.TEXT_OUTPUT_PER_1M;
+            const totalCost = (inputCost + outputCost) * multiplier;
+
+            if (DEBUG_CHAT) {
+              console.log('[Chat Usage Debug]', {
+                model: currentModel,
+                multiplier,
+                promptTokens,
+                completionTokens,
+                inputCost,
+                outputCost,
+                totalCost
+              });
+            }
+
+            // Minimum 1 credit per request, round up
+            const actualCost = Math.max(CREDIT_COSTS.MIN_CHAT_CREDITS, Math.ceil(totalCost));
 
             const deductionResult = await deductTokens(
               req.user.id,
-              totalTokensUsed,
-              `Chat completion (${currentModel})`,
-              costMultiplier
+              actualCost,
+              `Chat completion (${currentModel})`
             );
 
-            // Send usage info to client with multiplier details
+            // Send usage info to client
             if (deductionResult.success) {
               res.write(`data: ${JSON.stringify({
                 usage: {
-                  tokens: totalTokensUsed,
-                  costMultiplier: costMultiplier,
-                  actualCost: actualCost,
+                  promptTokens,
+                  completionTokens,
+                  totalApiTokens: promptTokens + completionTokens,
+                  costCalculation: {
+                    inputCost: inputCost.toFixed(4),
+                    outputCost: outputCost.toFixed(4),
+                    multiplier: multiplier.toFixed(2),
+                    totalCost: totalCost.toFixed(4)
+                  },
+                  tokensDeducted: actualCost,
                   newBalance: deductionResult.newBalance
                 }
               })}\n\n`);

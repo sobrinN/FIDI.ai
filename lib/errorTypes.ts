@@ -11,6 +11,7 @@ export enum ErrorType {
     TIMEOUT = 'TIMEOUT',
     NETWORK = 'NETWORK',
     INSUFFICIENT_TOKENS = 'INSUFFICIENT_TOKENS',
+    EXTERNAL_BILLING = 'EXTERNAL_BILLING', // OpenRouter/external API billing issues
     UNKNOWN = 'UNKNOWN'
 }
 

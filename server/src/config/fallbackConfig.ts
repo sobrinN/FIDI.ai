@@ -2,6 +2,8 @@
  * Model Fallback Configuration
  * Defines fallback chains for each model when primary model fails
  * Strategy: Try same-tier models first, then fallback to free tier
+ * 
+ * UPDATED: 2025-12-19 to match current allowed models
  */
 
 
@@ -12,88 +14,39 @@ export const MAX_FALLBACK_ATTEMPTS = 3;
  * Each model has a prioritized list of alternatives
  */
 export const MODEL_FALLBACK_CHAINS: Record<string, string[]> = {
-    // FREE MODELS - Fallback to other free coding models
-    'mistralai/devstral-2512:free': [
-        'kwaipilot/kat-coder-pro:free',
-        'qwen/qwen3-coder:free'
-    ],
-    'kwaipilot/kat-coder-pro:free': [
-        'mistralai/devstral-2512:free',
-        'qwen/qwen3-coder:free'
-    ],
-    'openai/gpt-oss-120b:free': [
-        'mistralai/devstral-2512:free',
-        'kwaipilot/kat-coder-pro:free'
-    ],
-    'qwen/qwen3-coder:free': [
-        'mistralai/devstral-2512:free',
-        'kwaipilot/kat-coder-pro:free'
-    ],
+    // FREE MODELS - Only one free model available, no fallbacks
+    'mistralai/devstral-2512:free': [],
 
     // PAID MODELS - Try other paid models first, then free tier
-    'openai/gpt-5.2': [
+    'google/gemini-3-flash-preview': [
+        'x-ai/grok-code-fast-1',
         'anthropic/claude-sonnet-4.5',
-        'google/gemini-3-pro-preview',
+        'mistralai/devstral-2512:free'
+    ],
+    'x-ai/grok-code-fast-1': [
+        'google/gemini-3-flash-preview',
+        'deepseek/deepseek-v3.2',
         'mistralai/devstral-2512:free'
     ],
     'anthropic/claude-sonnet-4.5': [
-        'anthropic/claude-opus-4.5',
-        'openai/gpt-5.2',
+        'google/gemini-3-flash-preview',
+        'deepseek/deepseek-v3.2',
         'mistralai/devstral-2512:free'
     ],
-    'anthropic/claude-opus-4.5': [
-        'anthropic/claude-sonnet-4.5',
-        'google/gemini-3-pro-preview',
+    'openai/gpt-oss-120b': [
+        'deepseek/deepseek-v3.2',
+        'google/gemini-3-flash-preview',
         'mistralai/devstral-2512:free'
     ],
-    'google/gemini-3-pro-preview': [
-        'anthropic/claude-sonnet-4.5',
-        'openai/gpt-5.2',
+    'deepseek/deepseek-v3.2': [
+        'openai/gpt-oss-120b',
+        'google/gemini-3-flash-preview',
         'mistralai/devstral-2512:free'
     ],
     'minimax/minimax-m2': [
-        'anthropic/claude-sonnet-4.5',
-        'google/gemini-3-pro-preview',
+        'google/gemini-3-flash-preview',
+        'deepseek/deepseek-v3.2',
         'mistralai/devstral-2512:free'
-    ],
-    'x-ai/glm-4.6': [
-        'anthropic/claude-sonnet-4.5',
-        'openai/gpt-5.2',
-        'mistralai/devstral-2512:free'
-    ],
-
-    // LEGACY MODELS - Fallback to free tier
-    'google/gemini-flash-1.5': [
-        'mistralai/devstral-2512:free',
-        'kwaipilot/kat-coder-pro:free'
-    ],
-    'google/gemini-pro-1.5': [
-        'mistralai/devstral-2512:free',
-        'kwaipilot/kat-coder-pro:free'
-    ],
-    'anthropic/claude-3.5-sonnet': [
-        'mistralai/devstral-2512:free',
-        'kwaipilot/kat-coder-pro:free'
-    ],
-    'anthropic/claude-3-opus': [
-        'mistralai/devstral-2512:free',
-        'kwaipilot/kat-coder-pro:free'
-    ],
-    'x-ai/grok-4.1-fast:free': [
-        'mistralai/devstral-2512:free',
-        'kwaipilot/kat-coder-pro:free'
-    ],
-    'x-ai/grok-beta': [
-        'mistralai/devstral-2512:free',
-        'kwaipilot/kat-coder-pro:free'
-    ],
-    'openai/gpt-4-turbo': [
-        'mistralai/devstral-2512:free',
-        'kwaipilot/kat-coder-pro:free'
-    ],
-    'openai/gpt-3.5-turbo': [
-        'mistralai/devstral-2512:free',
-        'kwaipilot/kat-coder-pro:free'
     ]
 };
 

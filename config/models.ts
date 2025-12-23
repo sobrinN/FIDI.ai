@@ -5,8 +5,7 @@
 
 export enum ModelTier {
   FREE = 'FREE',
-  PAID = 'PAID',
-  LEGACY = 'LEGACY'
+  PAID = 'PAID'
 }
 
 export interface ModelInfo {
@@ -28,46 +27,13 @@ export const FREE_MODELS: readonly ModelInfo[] = [
   {
     id: 'mistralai/devstral-2512:free',
     displayName: 'Devstral 2512',
-    description: 'Fast coding assistant optimized for development tasks',
+    description: 'Lightweight development model for rapid prototyping',
     tier: ModelTier.FREE,
     costMultiplier: 0,
     provider: 'Mistral AI',
     badge: 'FREE',
     badgeColor: 'text-green-400 bg-green-500/10 border-green-500/30',
-    icon: '⚡'
-  },
-  {
-    id: 'kwaipilot/kat-coder-pro:free',
-    displayName: 'KAT Coder Pro',
-    description: 'Professional coding assistant with advanced context understanding',
-    tier: ModelTier.FREE,
-    costMultiplier: 0,
-    provider: 'Kwaipilot',
-    badge: 'FREE',
-    badgeColor: 'text-green-400 bg-green-500/10 border-green-500/30',
-    icon: '🚀'
-  },
-  {
-    id: 'openai/gpt-oss-120b:free',
-    displayName: 'GPT OSS 120B',
-    description: 'Open-source optimized GPT model for general tasks',
-    tier: ModelTier.FREE,
-    costMultiplier: 0,
-    provider: 'OpenAI',
-    badge: 'FREE',
-    badgeColor: 'text-green-400 bg-green-500/10 border-green-500/30',
-    icon: '🌟'
-  },
-  {
-    id: 'qwen/qwen3-coder:free',
-    displayName: 'Qwen3 Coder',
-    description: 'Multilingual coding assistant with strong reasoning',
-    tier: ModelTier.FREE,
-    costMultiplier: 0,
-    provider: 'Qwen',
-    badge: 'FREE',
-    badgeColor: 'text-green-400 bg-green-500/10 border-green-500/30',
-    icon: '🔮'
+    icon: 'token-mistral'
   }
 ] as const;
 
@@ -76,70 +42,70 @@ export const FREE_MODELS: readonly ModelInfo[] = [
  */
 export const PAID_MODELS: readonly ModelInfo[] = [
   {
-    id: 'openai/gpt-5.2',
-    displayName: 'GPT-5.2',
-    description: 'Latest GPT model with enhanced reasoning and creativity',
-    tier: ModelTier.PAID,
-    costMultiplier: 1.5,
-    provider: 'OpenAI',
-    badge: '1.5x COST',
-    badgeColor: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
-    icon: '⭐'
-  },
-  {
-    id: 'anthropic/claude-sonnet-4.5',
-    displayName: 'Claude Sonnet 4.5',
-    description: 'Balanced performance and intelligence for complex tasks',
-    tier: ModelTier.PAID,
-    costMultiplier: 1.5,
-    provider: 'Anthropic',
-    badge: '1.5x COST',
-    badgeColor: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
-    icon: '🎭'
-  },
-  {
-    id: 'anthropic/claude-opus-4.5',
-    displayName: 'Claude Opus 4.5',
-    description: 'Most capable Claude model for demanding tasks',
-    tier: ModelTier.PAID,
-    costMultiplier: 1.5,
-    provider: 'Anthropic',
-    badge: '1.5x COST',
-    badgeColor: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
-    icon: '👑'
-  },
-  {
-    id: 'google/gemini-3-pro-preview',
-    displayName: 'Gemini 3 Pro',
-    description: 'Next-generation multimodal AI with advanced capabilities',
+    id: 'google/gemini-3-flash-preview',
+    displayName: 'Gemini 3 Flash',
+    description: 'Fast reasoning with token tracking - excellent for quick tasks',
     tier: ModelTier.PAID,
     costMultiplier: 1.5,
     provider: 'Google',
     badge: '1.5x COST',
     badgeColor: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
-    icon: '💎'
+    icon: 'token-google'
   },
   {
-    id: 'minimax/minimax-m2',
-    displayName: 'MiniMax M2',
-    description: 'Efficient model with strong performance on complex tasks',
-    tier: ModelTier.PAID,
-    costMultiplier: 1.5,
-    provider: 'MiniMax',
-    badge: '1.5x COST',
-    badgeColor: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
-    icon: '🔥'
-  },
-  {
-    id: 'x-ai/glm-4.6',
-    displayName: 'GLM 4.6',
-    description: 'Advanced language model with strong reasoning capabilities',
+    id: 'x-ai/grok-code-fast-1',
+    displayName: 'Grok Code Fast 1',
+    description: 'Code generation and debugging specialist',
     tier: ModelTier.PAID,
     costMultiplier: 1.5,
     provider: 'X.AI',
     badge: '1.5x COST',
     badgeColor: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
-    icon: '🧠'
+    icon: 'token-x'
+  },
+  {
+    id: 'anthropic/claude-sonnet-4.5',
+    displayName: 'Claude Sonnet 4.5',
+    description: 'Complex reasoning + multi-modal image support',
+    tier: ModelTier.PAID,
+    costMultiplier: 2.0,
+    provider: 'Anthropic',
+    badge: '2.0x COST',
+    badgeColor: 'text-orange-400 bg-orange-500/10 border-orange-500/30',
+    icon: 'token-anthropic'
+  },
+  {
+    id: 'openai/gpt-oss-120b',
+    displayName: 'GPT OSS 120B',
+    description: 'Large open-source model for deep reasoning',
+    tier: ModelTier.PAID,
+    costMultiplier: 1.5,
+    provider: 'OpenAI',
+    badge: '1.5x COST',
+    badgeColor: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
+    icon: 'token-openai'
+  },
+  {
+    id: 'deepseek/deepseek-v3.2',
+    displayName: 'DeepSeek V3.2',
+    description: 'Advanced reasoning model for analytical tasks',
+    tier: ModelTier.PAID,
+    costMultiplier: 1.5,
+    provider: 'DeepSeek',
+    badge: '1.5x COST',
+    badgeColor: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
+    icon: 'token-deepseek'
+  },
+  {
+    id: 'minimax/minimax-m2',
+    displayName: 'MiniMax M2',
+    description: 'Efficient reasoning with speed and quality balance',
+    tier: ModelTier.PAID,
+    costMultiplier: 1.5,
+    provider: 'MiniMax',
+    badge: '1.5x COST',
+    badgeColor: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
+    icon: 'token-minimax'
   }
 ] as const;
 
@@ -207,8 +173,8 @@ export function getModelCostDescription(modelId: string): string {
     return 'Unlimited usage - no token cost';
   }
 
-  if (info.costMultiplier === 1.5) {
-    return '1.5x token cost multiplier';
+  if (info.costMultiplier > 1.0) {
+    return `${info.costMultiplier}x token cost multiplier`;
   }
 
   return 'Standard cost';

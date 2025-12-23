@@ -24,8 +24,22 @@ const STALE_LOCK_MS = 30000; // Consider lock stale after 30 seconds
 const LOCK_MAX_RETRIES = 50;
 const LOCK_RETRY_DELAY_MS = 100;
 
-// Default token balance for new/migrated users
-export const DEFAULT_TOKEN_BALANCE = 50000;
+// Plan configurations
+export const PLAN_CONFIG = {
+  free: {
+    monthlyCredits: 1000000,
+    name: 'Plano Grátis'
+  },
+  pro: {
+    monthlyCredits: 10000000,
+    name: 'Plano Pro'
+  }
+} as const;
+
+// Default credit balance for new/migrated users (Free plan)
+export const DEFAULT_CREDIT_BALANCE = PLAN_CONFIG.free.monthlyCredits;
+
+export type UserPlan = 'free' | 'pro';
 
 export interface StoredUser {
   id: string;
@@ -34,12 +48,16 @@ export interface StoredUser {
   password: string;
   createdAt: number;
   updatedAt: number;
-  // Token system fields
-  tokenBalance?: number;
-  tokenUsageTotal?: number;
-  tokenUsageThisMonth?: number;
-  lastTokenReset?: number;
+  // Credit system fields
+  creditBalance?: number;
+  creditUsageTotal?: number;
+  creditUsageThisMonth?: number;
+  lastCreditReset?: number;
   isAdmin?: boolean;
+  // Plan system fields
+  plan?: UserPlan;
+  planStartDate?: number;
+  planRenewDate?: number;
 }
 
 interface UsersData {
@@ -120,22 +138,36 @@ async function acquireUserLock(): Promise<() => void> {
 }
 
 /**
- * Migrate user to include token system fields
- * Called lazily when accessing users without token fields
+ * Migrate user to include credit system fields and plan
+ * Called lazily when accessing users without credit fields
  * CENTRALIZED: Single source of truth for migration logic
  */
-export function migrateUserTokenFields(user: StoredUser): StoredUser {
+export function migrateUserCreditFields(user: StoredUser): StoredUser {
   // Already migrated
-  if (user.tokenBalance !== undefined) {
+  if (user.creditBalance !== undefined && user.plan !== undefined) {
     return user;
   }
 
+  // Partial migration: has credit fields but no plan
+  if (user.creditBalance !== undefined && user.plan === undefined) {
+    return {
+      ...user,
+      plan: 'free',
+      planStartDate: user.createdAt || Date.now(),
+      planRenewDate: Date.now() + (30 * 24 * 60 * 60 * 1000)
+    };
+  }
+
+  // Full migration: no credit fields or plan
   return {
     ...user,
-    tokenBalance: DEFAULT_TOKEN_BALANCE,
-    tokenUsageTotal: 0,
-    tokenUsageThisMonth: 0,
-    lastTokenReset: Date.now(),
+    plan: 'free',
+    creditBalance: DEFAULT_CREDIT_BALANCE,
+    creditUsageTotal: 0,
+    creditUsageThisMonth: 0,
+    lastCreditReset: Date.now(),
+    planStartDate: user.createdAt || Date.now(),
+    planRenewDate: Date.now() + (30 * 24 * 60 * 60 * 1000),
     isAdmin: user.isAdmin ?? false
   };
 }
@@ -182,7 +214,7 @@ function writeUsers(users: StoredUser[]): void {
 }
 
 /**
- * Get a user by email (with lazy migration for token fields)
+ * Get a user by email (with lazy migration for credit fields)
  */
 export async function getUserByEmail(email: string): Promise<StoredUser | null> {
   const users = readUsers();
@@ -193,19 +225,19 @@ export async function getUserByEmail(email: string): Promise<StoredUser | null> 
   }
 
   // Use centralized migration logic
-  const migratedUser = migrateUserTokenFields(user);
+  const migratedUser = migrateUserCreditFields(user);
 
   // Only persist if migration occurred
   if (migratedUser !== user) {
     await updateUser(user.id, migratedUser);
-    console.log('[UserStorage] Migrated user to token system:', user.id);
+    console.log('[UserStorage] Migrated user to credit system:', user.id);
   }
 
   return migratedUser;
 }
 
 /**
- * Get a user by ID (with lazy migration for token fields)
+ * Get a user by ID (with lazy migration for credit fields)
  */
 export async function getUserById(id: string): Promise<StoredUser | null> {
   const users = readUsers();
@@ -216,12 +248,12 @@ export async function getUserById(id: string): Promise<StoredUser | null> {
   }
 
   // Use centralized migration logic
-  const migratedUser = migrateUserTokenFields(user);
+  const migratedUser = migrateUserCreditFields(user);
 
   // Only persist if migration occurred
   if (migratedUser !== user) {
     await updateUser(user.id, migratedUser);
-    console.log('[UserStorage] Migrated user to token system:', user.id);
+    console.log('[UserStorage] Migrated user to credit system:', user.id);
   }
 
   return migratedUser;
@@ -248,21 +280,24 @@ export async function createUser(user: StoredUser): Promise<StoredUser> {
       throw new Error('Email already registered');
     }
 
-    // Initialize token fields for new users using centralized constant
-    const userWithTokens: StoredUser = {
+    // Initialize credit fields and plan for new users
+    const userWithCredits: StoredUser = {
       ...user,
-      tokenBalance: DEFAULT_TOKEN_BALANCE,
-      tokenUsageTotal: 0,
-      tokenUsageThisMonth: 0,
-      lastTokenReset: Date.now(),
+      plan: 'free',
+      creditBalance: DEFAULT_CREDIT_BALANCE,
+      creditUsageTotal: 0,
+      creditUsageThisMonth: 0,
+      lastCreditReset: Date.now(),
+      planStartDate: Date.now(),
+      planRenewDate: Date.now() + (30 * 24 * 60 * 60 * 1000), // 30 days from now
       isAdmin: false
     };
 
-    users.push(userWithTokens);
+    users.push(userWithCredits);
     writeUsers(users);
 
-    console.log('[UserStorage] Created user:', { id: userWithTokens.id, email: userWithTokens.email, tokenBalance: userWithTokens.tokenBalance });
-    return userWithTokens;
+    console.log('[UserStorage] Created user:', { id: userWithCredits.id, email: userWithCredits.email, creditBalance: userWithCredits.creditBalance });
+    return userWithCredits;
   } finally {
     releaseLock();
   }

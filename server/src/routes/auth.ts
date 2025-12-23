@@ -7,6 +7,7 @@ import {
   getUserByEmail,
   emailExists,
   createUser,
+  updateUser,
   StoredUser
 } from '../lib/userStorage.js';
 import { getUsageStats } from '../lib/tokenService.js';
@@ -261,8 +262,8 @@ authRouter.get('/me', async (req, res, next) => {
     // Verify token signature and expiration
     const user = verifyToken(token);
 
-    // Get token usage stats
-    const tokenStats = await getUsageStats(user.id);
+    // Get credit usage stats
+    const creditStats = await getUsageStats(user.id);
 
     return res.json({
       authenticated: true,
@@ -270,13 +271,86 @@ authRouter.get('/me', async (req, res, next) => {
         id: user.id,
         email: user.email,
         name: user.name,
-        // Merge token stats into user object (frontend expects flat structure)
-        tokenBalance: tokenStats?.tokenBalance ?? 0,
-        tokenUsageThisMonth: tokenStats?.tokenUsageThisMonth ?? 0,
-        daysUntilReset: tokenStats?.daysUntilReset ?? 0
+        // Merge credit stats into user object (frontend expects flat structure)
+        creditBalance: creditStats?.creditBalance ?? 0,
+        creditUsageThisMonth: creditStats?.creditUsageThisMonth ?? 0,
+        daysUntilReset: creditStats?.daysUntilReset ?? 0,
+        plan: creditStats?.plan ?? 'free',
+        monthlyAllowance: creditStats?.monthlyAllowance ?? 100,
+        planRenewDate: creditStats?.planRenewDate
       }
     });
   } catch (error) {
     return next(error);
+  }
+});
+
+authRouter.post('/upgrade-plan', async (req, res, next) => {
+  try {
+    const token = req.cookies.auth_token;
+    if (!token) {
+      throw new APIError('Not authenticated', 401, 'NOT_AUTHENTICATED');
+    }
+
+    // Verify token
+    const user = verifyToken(token);
+    const { plan } = req.body;
+
+    // Validate plan
+    if (!plan || !['free', 'pro'].includes(plan)) {
+      throw new APIError('Invalid plan. Must be "free" or "pro"', 400, 'INVALID_PLAN');
+    }
+
+    // Get current user data
+    const storedUser = await getUserByEmail(user.email);
+    if (!storedUser) {
+      throw new APIError('User not found', 404, 'USER_NOT_FOUND');
+    }
+
+    // Calculate new credit balance based on plan
+    const { PLAN_CONFIG } = await import('../lib/userStorage.js');
+    const monthlyAllowance = plan === 'pro' 
+      ? PLAN_CONFIG.pro.monthlyCredits 
+      : PLAN_CONFIG.free.monthlyCredits;
+
+    // Update user with new plan
+    const updatedUser = await updateUser(user.id, {
+      plan: plan as 'free' | 'pro',
+      creditBalance: monthlyAllowance,
+      creditUsageThisMonth: 0,
+      lastCreditReset: Date.now(),
+      planStartDate: Date.now(),
+      planRenewDate: Date.now() + (30 * 24 * 60 * 60 * 1000)
+    });
+
+    if (!updatedUser) {
+      throw new APIError('Failed to update user plan', 500, 'UPDATE_FAILED');
+    }
+
+    console.log('[Auth] User plan upgraded', {
+      userId: user.id,
+      newPlan: plan,
+      newBalance: monthlyAllowance
+    });
+
+    // Return updated user info
+    const creditStats = await getUsageStats(user.id);
+
+    res.json({
+      message: `Plano atualizado para ${plan} com sucesso`,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        creditBalance: creditStats?.creditBalance ?? monthlyAllowance,
+        creditUsageThisMonth: creditStats?.creditUsageThisMonth ?? 0,
+        daysUntilReset: creditStats?.daysUntilReset ?? 30,
+        plan: creditStats?.plan ?? plan,
+        monthlyAllowance: creditStats?.monthlyAllowance ?? monthlyAllowance,
+        planRenewDate: creditStats?.planRenewDate
+      }
+    });
+  } catch (error) {
+    next(error);
   }
 });

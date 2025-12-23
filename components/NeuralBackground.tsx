@@ -11,20 +11,21 @@ export const NeuralBackground: React.FC = () => {
 
     let width = window.innerWidth;
     let height = window.innerHeight;
-    
+
     const handleResize = () => {
       width = window.innerWidth;
       height = window.innerHeight;
       canvas.width = width;
       canvas.height = height;
     };
-    
+
     // Initial resize
     handleResize();
     window.addEventListener('resize', handleResize);
 
     // Neural Network Configuration
-    const nodeCount = Math.min(80, Math.floor(width / 15)); // Responsive count
+    // Reduced count for optimization and minimalism
+    const nodeCount = Math.min(50, Math.floor(width / 30));
     const connectionDistance = 150;
     const pulseSpeed = 2;
 
@@ -51,17 +52,17 @@ export const NeuralBackground: React.FC = () => {
       nodes.push({
         x: Math.random() * width,
         y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: (Math.random() - 0.5) * 0.5,
+        vx: (Math.random() - 0.5) * 0.3, // Slower movement
+        vy: (Math.random() - 0.5) * 0.3,
         radius: Math.random() * 1.5 + 0.5
       });
     }
 
     const animate = () => {
       ctx.clearRect(0, 0, width, height);
-      
-      // Update and Draw Nodes - Using a very light blue tint (blue-200 equiv: 191, 219, 254)
-      ctx.fillStyle = 'rgba(191, 219, 254, 0.5)';
+
+      // Update and Draw Nodes - Even lighter for minimalism
+      ctx.fillStyle = 'rgba(191, 219, 254, 0.2)';
       nodes.forEach(node => {
         node.x += node.vx;
         node.y += node.vy;
@@ -136,8 +137,8 @@ export const NeuralBackground: React.FC = () => {
   }, []);
 
   return (
-    <canvas 
-      ref={canvasRef} 
+    <canvas
+      ref={canvasRef}
       className="fixed top-0 left-0 w-full h-full pointer-events-none z-0"
     />
   );

@@ -1,10 +1,10 @@
 /**
  * VideoNode - A draggable node for video generation
- * Contains prompt input, model/duration selector, and preview
+ * REFACTORED: Industrial Light Theme
  */
 import React, { useState, useCallback, memo } from 'react';
 import { NodeProps, Handle, Position } from '@xyflow/react';
-import { Video, Loader2, Download, Settings, Sparkles } from 'lucide-react';
+import { Video, Loader2, Download, Settings, Zap } from 'lucide-react';
 import { VIDEO_MODELS, ASPECT_RATIOS, DURATIONS, RESOLUTIONS, getVideoModelById } from '../../../config/mediaModels';
 import { generateVideo } from '../../../lib/apiClient';
 
@@ -32,27 +32,15 @@ const VideoNodeComponent: React.FC<NodeProps> = ({ data }) => {
     const [showSettings, setShowSettings] = useState(false);
 
     const currentModel = getVideoModelById(model) || VIDEO_MODELS[0];
-    const supportedDurations = DURATIONS.filter(d =>
-        currentModel.supportsDurations.includes(d.value as '5s' | '10s')
-    );
-    const supportedResolutions = RESOLUTIONS.filter(r =>
-        currentModel.supportsResolutions.includes(r.value as '720p' | '1080p')
-    );
+    const supportedDurations = DURATIONS.filter(d => currentModel.supportsDurations.includes(d.value as '5s' | '10s'));
+    const supportedResolutions = RESOLUTIONS.filter(r => currentModel.supportsResolutions.includes(r.value as '720p' | '1080p'));
 
     const handleGenerate = useCallback(async () => {
         if (!prompt.trim() || isGenerating) return;
-
         setIsGenerating(true);
         setError(null);
-
         try {
-            const url = await generateVideo({
-                prompt,
-                model,
-                aspectRatio,
-                resolution,
-                duration
-            });
+            const url = await generateVideo({ prompt, model, aspectRatio, resolution, duration });
             setOutputUrl(url);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Generation failed');
@@ -62,61 +50,51 @@ const VideoNodeComponent: React.FC<NodeProps> = ({ data }) => {
     }, [prompt, model, aspectRatio, resolution, duration, isGenerating]);
 
     return (
-        <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl min-w-[320px] overflow-hidden">
-            {/* Input Handle */}
-            <Handle
-                type="target"
-                position={Position.Left}
-                className="!w-4 !h-4 !bg-pink-500 !border-2 !border-zinc-800"
-            />
+        <div className="bg-white border border-black rounded-sm shadow-lg min-w-[300px] overflow-hidden">
+            <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-black !border-2 !border-white" />
 
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-700 bg-zinc-800/50">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-gray-50">
                 <div className="flex items-center gap-2">
-                    <Video size={16} className="text-purple-400" />
-                    <span className="text-sm font-semibold text-white">Video</span>
+                    <Video size={14} className="text-text-primary" />
+                    <span className="text-xs font-mono uppercase tracking-wide font-bold text-text-primary">Video</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="text-xs text-zinc-400 font-mono">{currentModel.name}</span>
+                    <span className="text-[10px] text-text-secondary font-mono">{currentModel.name}</span>
                     <button
                         onClick={() => setShowSettings(!showSettings)}
-                        className={`p-1 rounded transition-colors ${showSettings ? 'bg-purple-500/20 text-purple-400' : 'text-zinc-400 hover:text-white'}`}
+                        className={`p-1 rounded-sm transition-colors ${showSettings ? 'bg-black text-white' : 'text-text-secondary hover:bg-gray-200'}`}
                     >
-                        <Settings size={14} />
+                        <Settings size={12} />
                     </button>
                 </div>
             </div>
 
-            {/* Settings Panel (Collapsible) */}
+            {/* Settings Panel */}
             {showSettings && (
-                <div className="px-4 py-3 border-b border-zinc-700 bg-zinc-800/30 space-y-3">
-                    {/* Model Selector */}
+                <div className="px-3 py-3 border-b border-gray-200 bg-gray-50 space-y-3">
                     <div>
-                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Model</label>
+                        <label className="text-[9px] text-text-secondary uppercase tracking-widest font-mono">Model</label>
                         <select
                             value={model}
                             onChange={(e) => setModel(e.target.value)}
-                            className="w-full mt-1 px-2 py-1.5 bg-zinc-800 border border-zinc-600 rounded text-sm text-white focus:border-purple-500 focus:outline-none"
+                            className="w-full mt-1 px-2 py-1.5 bg-white border border-gray-300 rounded-sm text-xs text-text-primary focus:border-black focus:outline-none font-mono"
                         >
                             {VIDEO_MODELS.map(m => (
-                                <option key={m.id} value={m.id}>
-                                    {m.name} ({m.badge})
-                                </option>
+                                <option key={m.id} value={m.id}>{m.name}</option>
                             ))}
                         </select>
                     </div>
-
-                    {/* Aspect Ratio */}
                     <div>
-                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Aspect Ratio</label>
+                        <label className="text-[9px] text-text-secondary uppercase tracking-widest font-mono">Ratio</label>
                         <div className="flex gap-1 mt-1 flex-wrap">
                             {ASPECT_RATIOS.slice(0, 3).map(ar => (
                                 <button
                                     key={ar.value}
                                     onClick={() => setAspectRatio(ar.value)}
-                                    className={`px-2 py-1 text-xs rounded border transition-colors ${aspectRatio === ar.value
-                                        ? 'bg-purple-500/20 border-purple-500 text-white'
-                                        : 'bg-zinc-800 border-zinc-600 text-zinc-400 hover:border-zinc-500'
+                                    className={`px-2 py-1 text-[10px] font-mono rounded-sm border transition-colors ${aspectRatio === ar.value
+                                        ? 'bg-black border-black text-white'
+                                        : 'bg-white border-gray-300 text-text-secondary hover:border-black'
                                         }`}
                                 >
                                     {ar.label}
@@ -124,18 +102,16 @@ const VideoNodeComponent: React.FC<NodeProps> = ({ data }) => {
                             ))}
                         </div>
                     </div>
-
-                    {/* Duration */}
                     <div>
-                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Duration</label>
+                        <label className="text-[9px] text-text-secondary uppercase tracking-widest font-mono">Duration</label>
                         <div className="flex gap-1 mt-1">
                             {supportedDurations.map(d => (
                                 <button
                                     key={d.value}
                                     onClick={() => setDuration(d.value)}
-                                    className={`px-2 py-1 text-xs rounded border transition-colors ${duration === d.value
-                                        ? 'bg-purple-500/20 border-purple-500 text-white'
-                                        : 'bg-zinc-800 border-zinc-600 text-zinc-400 hover:border-zinc-500'
+                                    className={`px-2 py-1 text-[10px] font-mono rounded-sm border transition-colors ${duration === d.value
+                                        ? 'bg-black border-black text-white'
+                                        : 'bg-white border-gray-300 text-text-secondary hover:border-black'
                                         }`}
                                 >
                                     {d.label}
@@ -143,20 +119,17 @@ const VideoNodeComponent: React.FC<NodeProps> = ({ data }) => {
                             ))}
                         </div>
                     </div>
-
-                    {/* Resolution */}
                     <div>
-                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Resolution</label>
+                        <label className="text-[9px] text-text-secondary uppercase tracking-widest font-mono">Resolution</label>
                         <div className="flex gap-1 mt-1">
                             {supportedResolutions.map(r => (
                                 <button
                                     key={r.value}
                                     onClick={() => setResolution(r.value)}
-                                    className={`px-2 py-1 text-xs rounded border transition-colors ${resolution === r.value
-                                        ? 'bg-purple-500/20 border-purple-500 text-white'
-                                        : 'bg-zinc-800 border-zinc-600 text-zinc-400 hover:border-zinc-500'
+                                    className={`px-2 py-1 text-[10px] font-mono rounded-sm border transition-colors ${resolution === r.value
+                                        ? 'bg-black border-black text-white'
+                                        : 'bg-white border-gray-300 text-text-secondary hover:border-black'
                                         }`}
-                                    title={r.pixels}
                                 >
                                     {r.label}
                                 </button>
@@ -167,50 +140,31 @@ const VideoNodeComponent: React.FC<NodeProps> = ({ data }) => {
             )}
 
             {/* Prompt Input */}
-            <div className="p-4">
+            <div className="p-3">
                 <textarea
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="Describe the video you want to create..."
-                    className="w-full h-20 px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-sm text-white placeholder-zinc-500 focus:border-purple-500 focus:outline-none resize-none"
+                    placeholder="Describe the video..."
+                    className="w-full h-16 px-2 py-2 bg-gray-50 border border-gray-200 rounded-sm text-xs text-text-primary placeholder-text-secondary focus:border-black focus:outline-none resize-none font-sans"
                 />
             </div>
 
-            {/* Preview Area */}
+            {/* Preview */}
             {(outputUrl || isGenerating || error) && (
-                <div className="px-4 pb-4">
+                <div className="px-3 pb-3">
                     {isGenerating && (
-                        <div className="flex items-center justify-center h-40 bg-zinc-800/50 rounded-lg border border-zinc-700">
-                            <div className="flex flex-col items-center gap-2 text-zinc-400">
-                                <Loader2 size={24} className="animate-spin" />
-                                <span className="text-xs">Rendering video...</span>
-                            </div>
+                        <div className="flex items-center justify-center h-32 bg-gray-100 rounded-sm border border-gray-200">
+                            <Loader2 size={20} className="animate-spin text-text-secondary" />
                         </div>
                     )}
-
                     {error && (
-                        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">
-                            {error}
-                        </div>
+                        <div className="p-2 bg-red-50 border border-red-200 rounded-sm text-red-600 text-[10px] font-mono">{error}</div>
                     )}
-
                     {outputUrl && !isGenerating && (
                         <div className="relative group">
-                            <video
-                                src={outputUrl}
-                                controls
-                                autoPlay
-                                loop
-                                className="w-full h-auto rounded-lg"
-                            />
-                            <a
-                                href={outputUrl}
-                                download
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="absolute top-2 right-2 p-2 bg-black/60 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                                <Download size={14} className="text-white" />
+                            <video src={outputUrl} controls autoPlay loop className="w-full h-auto rounded-sm border border-gray-200" />
+                            <a href={outputUrl} download target="_blank" rel="noopener noreferrer" className="absolute top-2 right-2 p-1.5 bg-white border border-black rounded-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Download size={12} className="text-text-primary" />
                             </a>
                         </div>
                     )}
@@ -218,30 +172,21 @@ const VideoNodeComponent: React.FC<NodeProps> = ({ data }) => {
             )}
 
             {/* Generate Button */}
-            <div className="px-4 pb-4">
+            <div className="px-3 pb-3">
                 <button
                     onClick={handleGenerate}
                     disabled={!prompt.trim() || isGenerating}
-                    className={`w-full py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all ${!prompt.trim() || isGenerating
-                        ? 'bg-zinc-700 text-zinc-500 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-500 hover:to-blue-500'
+                    className={`w-full py-2 rounded-sm font-mono text-xs uppercase tracking-wide flex items-center justify-center gap-2 transition-all ${!prompt.trim() || isGenerating
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                        : 'bg-black text-white hover:bg-gray-800'
                         }`}
                 >
-                    {isGenerating ? (
-                        <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                        <Sparkles size={16} />
-                    )}
+                    {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
                     <span>Generate</span>
                 </button>
             </div>
 
-            {/* Output Handle */}
-            <Handle
-                type="source"
-                position={Position.Right}
-                className="!w-4 !h-4 !bg-blue-500 !border-2 !border-zinc-800"
-            />
+            <Handle type="source" position={Position.Right} className="!w-3 !h-3 !bg-accent !border-2 !border-white" />
         </div>
     );
 };

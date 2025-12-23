@@ -6,12 +6,19 @@
       "name": "Ygor Sobrinho",
       "password": "$2a$10$0tlovvUgW2NWfkTcYTXnxe.FfMGc3zLZYNdHS5NMWtND5yqTjJomu",
       "createdAt": 1765821807958,
-      "updatedAt": 1765940086270,
-      "tokenBalance": 45000,
-      "tokenUsageTotal": 5000,
-      "tokenUsageThisMonth": 5000,
+      "updatedAt": 1766502192839,
+      "tokenBalance": 10000,
+      "tokenUsageTotal": 40000,
+      "tokenUsageThisMonth": 40000,
       "lastTokenReset": 1765821807959,
-      "isAdmin": false
+      "isAdmin": false,
+      "plan": "pro",
+      "planStartDate": 1766457975346,
+      "planRenewDate": 1769049975346,
+      "creditBalance": 9996871,
+      "creditUsageTotal": 3181,
+      "creditUsageThisMonth": 3129,
+      "lastCreditReset": 1766457975346
     }
   ],
   "version": 1

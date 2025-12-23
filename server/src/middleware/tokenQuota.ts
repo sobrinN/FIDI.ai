@@ -30,9 +30,12 @@ export function checkTokenQuota(requiredTokens: number) {
         });
 
         throw new APIError(
-          `Insufficient tokens. Required: ${requiredTokens}, Available: ${currentBalance}. Tokens reset monthly.`,
+          `Créditos insuficientes. Necessário: ${requiredTokens}, Disponível: ${currentBalance}. Os créditos renovam mensalmente.`,
           402,
-          'INSUFFICIENT_TOKENS'
+          'INSUFFICIENT_CREDITS',
+          undefined, // errorType
+          false, // retryable
+          { currentBalance, required: requiredTokens } // metadata
         );
       }
 

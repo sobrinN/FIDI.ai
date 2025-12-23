@@ -138,7 +138,7 @@ npm run test:coverage # Coverage report
 
 - [CLAUDE.md](./CLAUDE.md) - Development guide & architecture
 - [CHANGELOG.md](./CHANGELOG.md) - Version history
-- [IMPLEMENTATION_ROADMAP.md](./IMPLEMENTATION_ROADMAP.md) - Development phases
+- [SECURITY.md](./SECURITY.md) - Security implementation
 
 ## License
 

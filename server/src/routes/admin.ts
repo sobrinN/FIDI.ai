@@ -119,10 +119,10 @@ adminRouter.get('/tokens/stats/:userId', requireAdmin, async (req: AuthRequest, 
       email: user.email,
       name: user.name,
       stats: {
-        tokenBalance: stats.tokenBalance,
-        tokenUsageTotal: stats.tokenUsageTotal,
-        tokenUsageThisMonth: stats.tokenUsageThisMonth,
-        lastTokenReset: stats.lastTokenReset,
+        creditBalance: stats.creditBalance,
+        creditUsageTotal: stats.creditUsageTotal,
+        creditUsageThisMonth: stats.creditUsageThisMonth,
+        lastCreditReset: stats.lastCreditReset,
         daysUntilReset: stats.daysUntilReset
       }
     });
@@ -154,10 +154,10 @@ adminRouter.get('/tokens/overview', requireAdmin, (_req: AuthRequest, res, next)
       userId: user.id,
       email: user.email,
       name: user.name,
-      tokenBalance: user.tokenBalance ?? 50000,
-      tokenUsageThisMonth: user.tokenUsageThisMonth ?? 0,
-      tokenUsageTotal: user.tokenUsageTotal ?? 0,
-      lastTokenReset: user.lastTokenReset ?? Date.now(),
+      creditBalance: user.creditBalance ?? 100,
+      creditUsageThisMonth: user.creditUsageThisMonth ?? 0,
+      creditUsageTotal: user.creditUsageTotal ?? 0,
+      lastCreditReset: user.lastCreditReset ?? Date.now(),
       isAdmin: user.isAdmin ?? false
     }));
 

@@ -93,7 +93,6 @@ function isValidConversation(data: unknown): data is Conversation {
     Array.isArray(conv.messages) &&
     typeof conv.lastModified === 'number' &&
     // Optional fields
-    (conv.agentId === undefined || typeof conv.agentId === 'string') &&
     (conv.modelId === undefined || typeof conv.modelId === 'string') &&
     (conv.createdAt === undefined || typeof conv.createdAt === 'number') &&
     (conv.updatedAt === undefined || typeof conv.updatedAt === 'number')
@@ -175,7 +174,7 @@ export function setUserConversations(userId: string, conversations: Conversation
 /**
  * Get available storage quota information
  */
-export async function getStorageQuota(): Promise<{usage: number; quota: number} | null> {
+export async function getStorageQuota(): Promise<{ usage: number; quota: number } | null> {
   if ('storage' in navigator && 'estimate' in navigator.storage) {
     try {
       const estimate = await navigator.storage.estimate();
