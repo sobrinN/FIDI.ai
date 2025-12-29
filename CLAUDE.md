@@ -2,8 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Version:** 1.0.0
-**Last Updated:** 2025-12-23
+**Version:** 0.5.0
+**Last Updated:** 2025-12-29
 
 ## Project Overview
 
@@ -13,7 +13,7 @@ FIDI.ai is a modern AI platform built with React 19, TypeScript, and Express. It
 
 2. **Media Canvas**: A node-based workspace using @xyflow/react for generating images and videos through draggable, connectable nodes powered by Replicate models.
 
-The platform includes a comprehensive token-based credit system and industrial-themed UI design.
+The platform includes a comprehensive token-based credit system, industrial-themed UI design, and Portuguese (pt-br) localized interface.
 
 ## Development Commands
 
@@ -86,13 +86,20 @@ Frontend (React 19 + Vite)              Backend (Express + TypeScript)
 │   ├── TokenBalance.tsx             # Credit display widget
 │   ├── Auth.tsx                     # Login/registration forms
 │   ├── PlanUpgradeModal.tsx         # Upgrade from Free to Pro
+│   ├── MarkdownRenderer.tsx         # Code-highlighted markdown
+│   ├── LoadingSpinner.tsx           # Loading state indicator
+│   ├── ErrorBoundary.tsx            # React error boundary
+│   ├── Toast.tsx                    # Notification toasts
 │   ├── canvas/                      # Media Canvas components
 │   │   ├── MediaCanvas.tsx          # Node-based canvas (@xyflow/react)
 │   │   ├── CanvasToolbar.tsx        # Add image/video nodes
 │   │   └── nodes/
 │   │       ├── ImageNode.tsx        # Image generation node
 │   │       └── VideoNode.tsx        # Video generation node
-│   └── ...                          # Landing page components
+│   ├── HeroAnimation/               # Landing hero animations
+│   ├── NeuralPlanet.tsx             # 3D neural network visualization
+│   ├── NeuralBackground.tsx         # Animated particle network
+│   └── ...                          # Other landing page components
 ├── config/
 │   ├── models.ts                    # LLM model definitions (FREE/PAID)
 │   ├── mediaModels.ts               # Image & video model configs
@@ -104,6 +111,8 @@ Frontend (React 19 + Vite)              Backend (Express + TypeScript)
 ├── lib/
 │   ├── apiClient.ts                 # Frontend API calls
 │   ├── storageUtils.ts              # localStorage utilities
+│   ├── historyUtils.ts              # Conversation history helpers
+│   ├── migration.ts                 # Data migration utilities
 │   └── errorTypes.ts                # Error classification
 ├── server/
 │   ├── src/

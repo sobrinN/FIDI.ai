@@ -1,8 +1,10 @@
 # FIDI.ai - Multi-Model AI Chat & Media Canvas Platform
 
-**Version 1.0.0** | Modern AI platform built with React 19, TypeScript, and Express.
+![Version](https://img.shields.io/badge/version-0.5.0-blue) ![React](https://img.shields.io/badge/React-19-61DAFB) ![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6)
 
-> Chat with efficient LLMs from multiple providers, and generate images/videos using a node-based canvas.
+**Version 0.5.0** | Modern AI platform built with React 19, TypeScript, and Express.
+
+> Chat with efficient LLMs from multiple providers, and generate images/videos using a node-based canvas. 🇧🇷 Portuguese (pt-br) localized interface.
 
 ## ✨ Features
 
@@ -72,18 +74,25 @@ FIDI.ai/
 ├── components/              # React UI components
 │   ├── ChatInterface.tsx    # Chat with model selector
 │   ├── ModelSelector.tsx    # LLM model dropdown
+│   ├── TokenBalance.tsx     # Credit display widget
+│   ├── MarkdownRenderer.tsx # Code syntax highlighting
+│   ├── ErrorBoundary.tsx    # React error boundary
 │   ├── canvas/              # Media Canvas
 │   │   ├── MediaCanvas.tsx  # Node-based workspace
 │   │   └── nodes/           # ImageNode, VideoNode
-│   └── ...                  # Auth, Navbar, Landing page
+│   ├── HeroAnimation/       # Landing animations
+│   └── ...                  # Auth, Navbar, Landing
 ├── config/
 │   ├── models.ts            # LLM model definitions
-│   └── mediaModels.ts       # Image/video models
+│   ├── mediaModels.ts       # Image/video models
+│   └── constants.ts         # App constants
 ├── hooks/                   # Custom React hooks
-├── lib/                     # Utilities
+├── lib/                     # Utilities (API, storage, etc.)
 ├── server/                  # Express backend
 │   ├── src/routes/          # API endpoints
-│   └── src/lib/             # Token service, user storage
+│   ├── src/middleware/      # Auth, rate limiting
+│   └── src/lib/             # Token service, storage
+├── test/                    # Vitest test files
 └── App.tsx                  # Main application
 ```
 
@@ -148,10 +157,22 @@ npm run test:coverage          # Coverage report
 - [CHANGELOG.md](./CHANGELOG.md) - Version history
 - [SECURITY.md](./SECURITY.md) - Security implementation
 
+## 🛠️ Tech Stack
+
+| Category | Technology | Version |
+|----------|------------|--------:|
+| Frontend | React | 19.2.0 |
+| Styling | Tailwind CSS | 4.1.18 |
+| Animation | Framer Motion | 11.0.0 |
+| Canvas | @xyflow/react | 12.10.0 |
+| Backend | Express | 4.x |
+| Testing | Vitest | 4.0.14 |
+| Build | Vite | 6.2.0 |
+
 ## 📄 License
 
 MIT
 
 ---
 
-**Built by FIDI.ai Team** | v1.0.0
+**Built by FIDI.ai Team** | v0.5.0

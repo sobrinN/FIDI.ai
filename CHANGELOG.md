@@ -5,6 +5,23 @@ All notable changes to FIDI.ai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2025-12-29
+
+### Changed
+- **Documentation Overhaul**: Complete update of README.md and CLAUDE.md
+  - Added version badges and Tech Stack table to README
+  - Enhanced project structure with all 20+ components documented
+  - Added Portuguese (pt-br) localization notes
+  
+### Added
+- **Missing Components Documented**: MarkdownRenderer, LoadingSpinner, ErrorBoundary, Toast, HeroAnimation/, NeuralPlanet, NeuralBackground
+- **Missing Utilities Documented**: historyUtils.ts, migration.ts
+
+### Fixed
+- **Version Consistency**: Corrected version from 1.0.0 to proper semantic versioning
+
+---
+
 ## [0.4.5] - 2025-12-16
 
 ### Fixed
